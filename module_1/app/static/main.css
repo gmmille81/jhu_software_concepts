@@ -7,14 +7,9 @@ nav {
 .main-content{
     display: flex;
     padding-right: 5%;
-    padding-left: 5%;
     justify-content: space-between;
 }
 
-.bio{
-    vertical-align: top;
-    padding-right: 5%;
-}
 
 .profile-image img{
     flex: 1;
@@ -75,9 +70,8 @@ h1 {
 
 h2 {
     font-size: large;
-    padding-left: 5%;
 }
 
-.linkedin-link{
+.base-content{
     padding-left: 5%;
 }
