@@ -1,11 +1,8 @@
 from flask import Flask
 
-app = Flask(__name__)
+from app import views
 
-@app.route('/')
-
-def hello():
-    return 'Welcome to my website'
-
-if __name__=='__main__':
-    app.run(host='0.0.0.0', port=8080)
+def create_app():
+    app = Flask(__name__)
+    app.register_blueprint(views.bp)
+    return app
