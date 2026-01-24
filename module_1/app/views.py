@@ -2,11 +2,6 @@ from flask import Blueprint,render_template
 
 bp = Blueprint("views",__name__,template_folder='templates')
 
-# @bp.route('/')
-
-# def home():
-#     return render_template('base.html')
-
 @bp.route("/")
 def home():
     return render_template("pages/home.html")
