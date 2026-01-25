@@ -1,10 +1,12 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %} <!-- Links page to parent page (base.html)-->
 
-{% block header %}
-  <h1>{% block title %}Greg Miller{% endblock title %}</h1>
+{% block title %}Home{% endblock title %} <!--child for the title block, specifying which page-->
+
+{% block header %} <!--child for the header block, specifying which page-->
+  <h1>Greg Miller</h1> 
 {% endblock header %}
 
-{% block content %}
+{% block content %} <!--child for the content block, include all page-specific html content-->
 <h2>Space Vehicle Systems Integration and Test Engineer at BAE Systems</h2>
 <div class="main-content">
 <div class="bio"><p>Greg Miller is a Space Vehicle Systems Integration and Test Engineer, specializing in test of RF communication subsystems.

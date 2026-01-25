@@ -10,7 +10,6 @@
 		-> profile-picture.jpg
 	-> templates
 		->base.html
-		->navigation.html
 		->pages
 			-> home.html
 			->content.html

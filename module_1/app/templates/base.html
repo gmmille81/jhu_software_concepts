@@ -1,16 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head> <!--title with parent block for page specific title elements-->
     <title>Greg Miller - {% block title %}{% endblock title %}</title>
     <link rel="stylesheet" href="static/main.css">
 </head>
 <body>
-    {% include("navigation.html") %}
+    <nav> <!--nav element for top navigation bar with div elements to handle css-->
+        <div class="nav-container">
+            <div class="nav-title">Greg Miller's Website</div>
+        <ul>
+          <li><a href="{{ url_for('views.home') }}">Home</a></li>
+          <li><a href="{{ url_for('views.contact') }}">Contact</a></li>
+          <li><a href="{{ url_for('views.projects') }}">Projects</a></li>
+        </ul>
+        </div>
+    </nav>
     <section>
-        <header>
+        <header> <!--general header section with parent for page-specific header content-->
           {% block header %}{% endblock header %}
         </header>
-        <main class="base-content">
+        <main class="base-content"> <!--general content section with parent for page-specific content-->
           {% block content %}{% endblock content %}
         </main>
     </section>
