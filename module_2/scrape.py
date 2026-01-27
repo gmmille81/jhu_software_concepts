@@ -54,7 +54,18 @@ def clean_data(data):
     for key in data.keys():
         master_dict[key] = {}
         master_dict[key]['university'] = data[key][0].replace('\n','')
-        master_dict[key]['phd_masters'] = re.findall("\b(ph\.?d\.?|masters?('s)?)\b",data[key][1])
+        phd_masters = re.findall("(Ph\.?D\.?|Masters?('s)?)",data[key][1])
+        if len(phd_masters) > 0:
+            master_dict[key]['phd_masters'] = re.findall("(Ph\.?D\.?|Masters?('s)?)",data[key][1],re.IGNORECASE)[0][0]
+        else:
+            master_dict[key]['phd_masters'] = ''
+        
+        master_dict[key]['date-added'] = data[key][2].replace('\t','').replace('\n','')
+        decision = data[key][3].replace('\t','').replace('\n','').replace(' ','').split('on')[0]
+        master_dict[key]['decision'] = decision
+
+
+
         # program_and_type = data[key][1].replace('\n','').split('PhD')
         # program_and_type = program_and_type.split('Masters')
         # master_dict[key]['program'] = program_and_type[0]
