@@ -1,0 +1,4 @@
+beautifulsoup4>=4.12.2       # For parsing HTML
+certifi>=2023.7.22           # SSL certificates for urllib3
+urllib3>=2.0.4               # HTTP requests
+python>=3.10

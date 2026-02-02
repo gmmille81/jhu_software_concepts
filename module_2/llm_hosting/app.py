@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Flask + tiny local LLM standardizer with incremental JSONL CLI output and batch processing."""
+"""
+Flask + local tiny LLM standardizer for cleaning university and program names.
+
+Features:
+- Incremental JSONL CLI output
+- Batch processing using a small local LLM
+- Few-shot examples for more accurate normalization
+"""
 
 from __future__ import annotations
 
@@ -17,7 +24,8 @@ from llama_cpp import Llama  # CPU-only by default if N_GPU_LAYERS=0
 
 app = Flask(__name__)
 
-# ---------------- Model config ----------------
+# ---------------- Model configuration ----------------
+# Model repository and file names can be overridden with environment variables
 MODEL_REPO = os.getenv(
     "MODEL_REPO",
     "TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF",
@@ -27,33 +35,42 @@ MODEL_FILE = os.getenv(
     "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
 )
 
-N_THREADS = int(os.getenv("N_THREADS", "2"))  # dual-core CPU
-N_CTX = int(os.getenv("N_CTX", "512"))
-N_GPU_LAYERS = int(os.getenv("N_GPU_LAYERS", "0"))  # CPU-only
+# LLM runtime parameters
+N_THREADS = int(os.getenv("N_THREADS", "2"))  # Number of CPU threads
+N_CTX = int(os.getenv("N_CTX", "512"))  # Context window for LLM
+N_GPU_LAYERS = int(os.getenv("N_GPU_LAYERS", "0"))  # CPU-only if 0
 
+# Paths to canonical lists of universities and programs
 CANON_UNIS_PATH = os.getenv("CANON_UNIS_PATH", "canon_universities.txt")
 CANON_PROGS_PATH = os.getenv("CANON_PROGS_PATH", "canon_programs.txt")
 
-# Precompiled, non-greedy JSON object matcher
+# Precompiled regex to extract JSON objects from LLM output (non-greedy)
 JSON_OBJ_RE = re.compile(r"\{.*?\}", re.DOTALL)
 
-# ---------------- Canonical lists + abbrev maps ----------------
+# ---------------- Load canonical lists + abbreviation maps ----------------
 def _read_lines(path: str) -> List[str]:
+    """
+    Reads a text file and returns a list of non-empty, stripped lines.
+    Returns an empty list if the file is missing.
+    """
     try:
         with open(path, "r", encoding="utf-8") as f:
             return [ln.strip() for ln in f if ln.strip()]
     except FileNotFoundError:
         return []
 
+# Load canonical universities and programs
 CANON_UNIS = _read_lines(CANON_UNIS_PATH)
 CANON_PROGS = _read_lines(CANON_PROGS_PATH)
 
+# Common abbreviations for universities
 ABBREV_UNI: Dict[str, str] = {
     r"(?i)^mcg(\.|ill)?$": "McGill University",
     r"(?i)^(ubc|u\.?b\.?c\.?)$": "University of British Columbia",
     r"(?i)^uoft$": "University of Toronto",
 }
 
+# Fix common spelling mistakes in universities and programs
 COMMON_UNI_FIXES: Dict[str, str] = {
     "McGiill University": "McGill University",
     "Mcgill University": "McGill University",
@@ -65,7 +82,7 @@ COMMON_PROG_FIXES: Dict[str, str] = {
     "Info Studies": "Information Studies",
 }
 
-# ---------------- Few-shot prompt ----------------
+# ---------------- Few-shot LLM prompt ----------------
 SYSTEM_PROMPT = (
     "You are a data cleaning assistant. Standardize degree program and university "
     "names.\n\n"
@@ -81,6 +98,7 @@ SYSTEM_PROMPT = (
     "  standardized_program, standardized_university\n"
 )
 
+# Example few-shot pairs to improve LLM consistency
 FEW_SHOTS: List[Tuple[Dict[str, str], Dict[str, str]]] = [
     (
         {"program": "Information Studies, McGill University"},
@@ -105,14 +123,20 @@ FEW_SHOTS: List[Tuple[Dict[str, str], Dict[str, str]]] = [
     ),
 ]
 
+# Singleton LLM instance
 _LLM: Llama | None = None
 
-# ---------------- LLM load ----------------
+# ---------------- Load LLM ----------------
 def _load_llm() -> Llama:
+    """
+    Load the local LLaMA model using huggingface_hub.
+    Returns the cached instance if already loaded.
+    """
     global _LLM
     if _LLM is not None:
         return _LLM
 
+    # Download model from HuggingFace if not present
     model_path = hf_hub_download(
         repo_id=MODEL_REPO,
         filename=MODEL_FILE,
@@ -121,6 +145,7 @@ def _load_llm() -> Llama:
         force_filename=MODEL_FILE,
     )
 
+    # Instantiate LLaMA with specified parameters
     _LLM = Llama(
         model_path=model_path,
         n_ctx=N_CTX,
@@ -132,12 +157,22 @@ def _load_llm() -> Llama:
 
 # ---------------- Normalization helpers ----------------
 def _best_match(name: str, candidates: List[str], cutoff: float = 0.86) -> str | None:
+    """
+    Return the closest match from candidates using difflib.
+    Returns None if no match exceeds cutoff similarity.
+    """
     if not name or not candidates:
         return None
     matches = difflib.get_close_matches(name, candidates, n=1, cutoff=cutoff)
     return matches[0] if matches else None
 
 def _post_normalize_program(prog: str) -> str:
+    """
+    Normalize program name:
+    - Apply common fixes
+    - Title-case the string
+    - Fallback to best match from canonical list
+    """
     p = (prog or "").strip()
     p = COMMON_PROG_FIXES.get(p, p)
     p = p.title()
@@ -147,6 +182,14 @@ def _post_normalize_program(prog: str) -> str:
     return match or p
 
 def _post_normalize_university(uni: str) -> str:
+    """
+    Normalize university name:
+    - Expand abbreviations
+    - Apply common spelling fixes
+    - Title-case and adjust capitalization
+    - Fallback to closest match from canonical list
+    - Return 'Unknown' if empty
+    """
     u = (uni or "").strip()
     for pat, full in ABBREV_UNI.items():
         if re.fullmatch(pat, u):
@@ -163,21 +206,25 @@ def _post_normalize_university(uni: str) -> str:
 # ---------------- Batch LLM call ----------------
 def _call_llm_batch(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
     """
-    Process a batch of rows in a single LLM call.
+    Process a batch of input rows with the LLM.
     Each row should have 'program-major' and 'university'.
     Returns a list of standardized results.
     """
     llm = _load_llm()
+
+    # Prepare input for LLM
     batch_input = [{"program-major": r.get("program-major", ""), "university": r.get("university", "")} for r in rows]
 
-    # Build messages for few-shot + batch input
+    # Construct few-shot messages
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for x_in, x_out in FEW_SHOTS:
         messages.append({"role": "user", "content": json.dumps(x_in)})
         messages.append({"role": "assistant", "content": json.dumps(x_out)})
 
+    # Add the batch input
     messages.append({"role": "user", "content": json.dumps({"rows": batch_input}, ensure_ascii=False)})
 
+    # Call LLM
     out = llm.create_chat_completion(
         messages=messages,
         temperature=0.0,
@@ -185,10 +232,12 @@ def _call_llm_batch(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
         top_p=1.0,
     )
 
+    # Parse LLM output
     text = (out["choices"][0]["message"]["content"] or "").strip()
     results: List[Dict[str, str]] = []
 
     try:
+        # Attempt to find all JSON objects in the output
         json_objects = JSON_OBJ_RE.findall(text)
         if not json_objects:
             json_objects = [text]
@@ -200,21 +249,23 @@ def _call_llm_batch(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
             results.append({"standardized_program": std_prog, "standardized_university": std_uni})
 
     except Exception:
+        # Fallback if parsing fails: normalize input directly
         for r in batch_input:
             std_prog = _post_normalize_program(r.get("program-major", ""))
             std_uni = _post_normalize_university(r.get("university", ""))
             results.append({"standardized_program": std_prog, "standardized_university": std_uni})
 
+    # Ensure results list is same length as input
     while len(results) < len(rows):
         results.append({"standardized_program": "", "standardized_university": "Unknown"})
 
     return results
 
-# ---------------- Parallel batch processing (incremental write) ----------------
+# ---------------- Parallel batch processing with optional incremental write ----------------
 def _parallel_process(rows: List[Dict[str, Any]], sink=None, batch_size: int = 5) -> List[Dict[str, Any]]:
     """
-    Process rows in batches, writing each batch to `sink` if provided.
-    Returns the list of processed rows.
+    Process rows in batches and optionally write each batch incrementally to `sink`.
+    Prints ETA and progress per batch.
     """
     total = len(rows)
     processed_rows: List[Dict[str, Any]] = []
@@ -225,6 +276,7 @@ def _parallel_process(rows: List[Dict[str, Any]], sink=None, batch_size: int = 5
         results = _call_llm_batch(batch)
 
         for row, result in zip(batch, results):
+            # Store LLM standardized output in row
             row["llm-generated-program"] = result["standardized_program"]
             row["llm-generated-university"] = result["standardized_university"]
             processed_rows.append(row)
@@ -235,6 +287,7 @@ def _parallel_process(rows: List[Dict[str, Any]], sink=None, batch_size: int = 5
                 sink.write("\n")
                 sink.flush()
 
+        # Print progress
         elapsed = time.time() - start_time
         completed = min(i + batch_size, total)
         avg_per_row = elapsed / completed
@@ -246,6 +299,12 @@ def _parallel_process(rows: List[Dict[str, Any]], sink=None, batch_size: int = 5
 
 # ---------------- Input normalization ----------------
 def _normalize_input(payload: Any) -> List[Dict[str, Any]]:
+    """
+    Normalize input payload to a list of rows.
+    Accepts either:
+    - A list of row dictionaries
+    - A dict with a 'rows' key containing a list
+    """
     if isinstance(payload, list):
         return payload
     if isinstance(payload, dict) and isinstance(payload.get("rows"), list):
@@ -255,17 +314,28 @@ def _normalize_input(payload: Any) -> List[Dict[str, Any]]:
 # ---------------- Flask endpoints ----------------
 @app.get("/")
 def health() -> Any:
+    """Health check endpoint."""
     return jsonify({"ok": True})
 
 @app.post("/standardize")
 def standardize() -> Any:
+    """Endpoint to standardize university/program names via POST JSON."""
     payload = request.get_json(force=True, silent=True)
     rows = _normalize_input(payload)
     rows = _parallel_process(rows, batch_size=5)
     return jsonify({"rows": rows})
 
-# ---------------- CLI processing ----------------
+# ---------------- CLI file processing ----------------
 def _cli_process_file(in_path: str, out_path: str | None, append: bool, to_stdout: bool) -> None:
+    """
+    CLI mode: process a JSON input file and write results incrementally to output.
+    
+    Parameters:
+    - in_path: path to input JSON file
+    - out_path: path to output JSONL file (or None to use default)
+    - append: append to output file if True
+    - to_stdout: write output to stdout if True
+    """
     with open(in_path, "r", encoding="utf-8") as f:
         rows = _normalize_input(json.load(f))
 
@@ -278,13 +348,12 @@ def _cli_process_file(in_path: str, out_path: str | None, append: bool, to_stdou
     assert sink is not None
 
     try:
-        # Pass sink into parallel process for incremental writing
         _parallel_process(rows, sink=sink, batch_size=5)
     finally:
         if sink is not sys.stdout:
             sink.close()
 
-# ---------------- Main ----------------
+# ---------------- Main CLI / Server entrypoint ----------------
 if __name__ == "__main__":
     import argparse
 
