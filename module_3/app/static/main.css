@@ -1,0 +1,78 @@
+
+nav { /* defines for full nav bar*/
+    background-color: #cfe8f6;
+    padding: 15px 40px;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+} 
+
+.nav-container { /* style nav bar to space out option elements*/
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.nav-title { /* defines style for the website title on left side of nav bar*/
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f3a4a;
+}
+
+nav ul { /* defines spacing for nav bar items*/
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 30px;
+}
+
+nav ul li a { /* defines styling of text within nav options*/
+    color: #1f3a4a;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+nav ul li a { /* defines area that will change color on hover*/
+    display: block;              
+    padding: 8px 14px;
+    border-radius: 6px;
+    color: #1f3a4a;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+nav ul li a:hover { /* makes nav options darker blue on hover*/
+    background-color: #9fcbe8;   
+    color: #0f2a3a;
+}
+.main-content{ /* defines style body content section, primarily offset from side of page*/
+    display: flex;
+    padding-right: 5%;
+    justify-content: space-between;
+}
+
+
+.profile-image img{ /* sets image size and puts it on the right side of page*/
+    flex: 1;
+    max-width: 400px; 
+    height: auto;
+    text-align: right;
+}
+
+
+body{ /* makes default lighter color and font size for all area not nav bar*/
+    background-color: #eaf5fc;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+h1 { /* offset header slightly from edge of page*/
+    padding-left: 5%;
+}
+
+h2 { /* define size of h2*/
+    font-size: large;
+}
+
+.base-content{ /* offsets content slightly from the edge of page*/
+    padding-left: 5%;
+}

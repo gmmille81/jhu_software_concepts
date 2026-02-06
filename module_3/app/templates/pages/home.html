@@ -1,0 +1,20 @@
+{% extends 'base.html' %} <!-- Links page to parent page (base.html)-->
+
+{% block title %}Home{% endblock title %} <!--child for the title block, specifying which page-->
+
+{% block header %} <!--child for the header block, specifying which page-->
+  <h1>Greg Miller</h1> 
+{% endblock header %}
+
+{% block content %} <!--child for the content block, include all page-specific html content-->
+<h2>Space Vehicle Systems Integration and Test Engineer at BAE Systems</h2>
+<div class="main-content">
+<div class="bio"><p>Greg Miller is a Space Vehicle Systems Integration and Test Engineer, specializing in test of RF communication subsystems.
+  He has been working at BAE Systems Space and Mission Systems for a little over two years. Before joining BAE SMS, he worked as a Systems Engineer at NASA HQ. 
+  Greg graduated with his B.S in Aerospace Engineering in 2022 from the University of Maryland, College Park. In his free time, Greg enjoys playing the drums, hiking, running, and attending concerts. 
+</p></div>
+<div class="profile-image">
+  <img src="static/profile-picture.jpg" alt="Profile Picture">
+</div>
+</div>
+{% endblock content %}
