@@ -2,7 +2,7 @@
 ### Class: Modern Software Concepts in Python
 ### File purpose: Call the function to initialize my website instance (flask), then run the website on 0.0.0.0
 
-from app.__init__ import create_app #import function to init app from other file
+from app import create_app #import function to init app from other file
 
 app = create_app() #call function to create app
 
