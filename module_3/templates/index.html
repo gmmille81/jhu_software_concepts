@@ -1,0 +1,11 @@
+{% extends 'base.html' %} <!-- Links page to parent page (base.html)-->
+
+{% block content %} <!--child for the content block, include all page-specific html content-->
+<h1>{% block title %}Title{% endblock %}</h1>
+{% for question in applicant_data%}
+<div class="question">
+  <h3>{{question[0]}}</h3>
+  <i><p>Answer: {{question[1]}}</p></i>
+</div>
+{%endfor%}
+{% endblock %}

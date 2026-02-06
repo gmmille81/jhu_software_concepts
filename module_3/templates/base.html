@@ -6,22 +6,11 @@
 </head>
 <body>
     <nav> <!--nav element for top navigation bar with div elements to handle css-->
-        <div class="nav-container">
-            <div class="nav-title">Greg Miller's Website</div>
-        <ul>
-          <li><a href="{{ url_for('views.home') }}">Home</a></li>
-          <li><a href="{{ url_for('views.contact') }}">Contact</a></li>
-          <li><a href="{{ url_for('views.projects') }}">Projects</a></li>
-        </ul>
-        </div>
+      <a href="{{url_for('index') }}">Saved Applicant Data</a>
     </nav>
-    <section>
-        <header> <!--general header section with parent for page-specific header content-->
-          {% block header %}{% endblock header %}
-        </header>
-        <main class="base-content"> <!--general content section with parent for page-specific content-->
-          {% block content %}{% endblock content %}
-        </main>
-    </section>
+    <hr>
+    <div class="content">
+      {% block content %}{% endblock %}
+    </div>
 </body>
 </html>

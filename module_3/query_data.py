@@ -13,13 +13,15 @@ def connect():
 def questions(connection):
     with connection.cursor() as cur:
         answers = []
+        question = 'How many entries do you have in your database who have applied for Fall 2026?'
         query1 = """
         SELECT COUNT(p_id)
         FROM applicants
         WHERE term = 'Fall 2026';
         """
         cur.execute(query1)
-        answers.append(cur.fetchall()[0])
+        answers.append([question,cur.fetchall()[0][0]])
+        question = 'What percentage of entries are from international students (not American or Other) (to two decimal places)?'
         query2 = """
         SELECT
             ROUND(
@@ -31,7 +33,8 @@ def questions(connection):
 
         """
         cur.execute(query2)
-        answers.append(cur.fetchall()[0])
+        answers.append([question,cur.fetchall()[0][0]])
+        question = 'What is the average GPA, GRE, GRE V, GRE AW of applicants who provide these metrics?'
         query3 = """
         SELECT
             ROUND(AVG(gpa):: numeric, 2) AS avg_gpa,
@@ -42,8 +45,10 @@ def questions(connection):
         """
         cur.execute(query3)
         avg_gpa, avg_gre, avg_gre_v, avg_gre_aw = cur.fetchall()[0]
-        answers.append([avg_gpa,avg_gre,avg_gre_v,avg_gre_aw])
-
+        print(avg_gpa,avg_gre, avg_gre_v, avg_gre_aw)
+        ret_str = "GPA:" + str(avg_gpa) + " GRE:" + str(avg_gre) +  " GRE V:" + str(avg_gre_v) + " GRE AW:" + str(avg_gre_aw)
+        answers.append([question,ret_str])
+        question = 'What is their average GPA of American students in Fall 2026?'
         query4 = """
         SELECT
             ROUND(AVG(gpa)::numeric, 2) AS avg_gpa
@@ -52,8 +57,8 @@ def questions(connection):
         AND term = 'Fall 2026';
         """
         cur.execute(query4)
-        answers.append(cur.fetchall()[0])
-
+        answers.append([question,cur.fetchall()[0][0]])
+        question = 'What percent of entries for Fall 2026 are Acceptances (to two decimal places)?'
         query5 = """
         SELECT
             ROUND(
@@ -64,8 +69,8 @@ def questions(connection):
         FROM applicants;
         """
         cur.execute(query5)
-        answers.append(cur.fetchall()[0])
-
+        answers.append([question,cur.fetchall()[0][0]])
+        question = 'What is the average GPA of applicants who applied for Fall 2026 who are Acceptances?'
         query6 = """
         SELECT
             ROUND(AVG(gpa)::numeric, 2) AS avg_gpa
@@ -74,8 +79,8 @@ def questions(connection):
         AND term = 'Fall 2026';
         """
         cur.execute(query6)
-        answers.append(cur.fetchall()[0])
-
+        answers.append([question,cur.fetchall()[0][0]])
+        question = 'How many entries are from applicants who applied to JHU for a masters degrees in Computer Science?'
         query7 = """
         SELECT COUNT(p_id)
         FROM applicants
@@ -83,8 +88,8 @@ def questions(connection):
         AND program = 'Computer Science, Johns Hopkins University';
         """
         cur.execute(query7)
-        answers.append(cur.fetchall()[0])
-
+        answers.append([question,cur.fetchall()[0][0]])
+        question = 'How many entries from 2026 are acceptances from applicants who applied to Georgetown University, MIT, Stanford University, or Carnegie Mellon University for a PhD in Computer Science?'
         query8 = """
         SELECT COUNT(*) AS num_acceptances
         FROM applicants
@@ -97,8 +102,8 @@ def questions(connection):
         #
         
         cur.execute(query8)
-        answers.append(cur.fetchall()[0])
-
+        answers.append([question,cur.fetchall()[0][0]])
+        question = 'Do you numbers for question 8 change if you use LLM Generated Fields (rather than your downloaded fields)?'
 
         query9 = """
         SELECT COUNT(*) AS num_acceptances
@@ -111,8 +116,9 @@ def questions(connection):
         """
         
         cur.execute(query9)
-        answers.append(cur.fetchall()[0])
+        answers.append([question,cur.fetchall()[0][0]])
         #Provides number of unique programs in non-llm
+        question = 'How many unique program names and university names are in the data set?'
         query10 = """
         SELECT 
             COUNT(DISTINCT TRIM(SPLIT_PART(program, ',', 1))) AS unique_programs,
@@ -121,8 +127,12 @@ def questions(connection):
         """
         
         cur.execute(query10)
-        answers.append(cur.fetchall()[0])
+        ans = cur.fetchall()[0]
+        print(ans)
+        ret_str = 'Unique Programs: ' + str(ans[0]) + ' Unique Universities: ' + str(ans[1])
+        answers.append([question,ret_str])
         #Provides number of unique programs in llm
+        question = 'How many unique llm-generated program names and university names are in the data set?'
         query11 = """
         SELECT 
             COUNT(DISTINCT llm_generated_program) AS unique_programs,
@@ -131,10 +141,13 @@ def questions(connection):
         """
         
         cur.execute(query11)
-        answers.append(cur.fetchall()[0])
-        # answers.append(cur.fetchall())
+        ans = cur.fetchall()[0]
+        print(ans)
+        ret_str = 'Unique Programs: ' + str(ans[0]) + ' Unique Universities: ' + str(ans[1])
+        answers.append([question,ret_str])
         print(answers)
-        print("Table 'applicants' created successfully (psycopg3).")
-
+        cur.close()
+        conn.close()
+        return answers
 conn = connect()
 questions(conn)
