@@ -214,11 +214,6 @@ def questions(connection):
 
     return answers
 
-# Example usage:
-# conn = connect()
-# answers_list = questions(conn)
-# print(answers_list)
-
 
 # Example usage
 conn = connect()

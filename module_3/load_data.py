@@ -314,6 +314,6 @@ def insert_applicants_from_json_batch(entries):
 
 
 #create_database("applicant_data", "postgres", "abc123", "127.0.0.1", 5432)
-#create_table()
-#bulk_insert_json('jhu_software_concepts/module_3/module_2/llm_extend_applicant_data.json')
+create_table()
+bulk_insert_json('jhu_software_concepts/module_3/module_2/llm_extend_applicant_data.json')
 
