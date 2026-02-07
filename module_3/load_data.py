@@ -1,3 +1,7 @@
+### Author: Greg Miller
+### Class: Modern Software Concepts in Python
+### File purpose: Create a PostGreSQL table called applicants and import the baseline data from module_2
+
 import sys
 import os
 
@@ -215,8 +219,9 @@ def bulk_insert_json(json_file_path, batch_size=1000):
 
 
 
-
+dirname = os.path.dirname(__file__)
+filename = os.path.join(dirname, 'module_2/llm_extend_applicant_data.json')
 # Initial functions to create the table 
 create_table()
-bulk_insert_json('jhu_software_concepts/module_3/module_2/llm_extend_applicant_data.json')
+bulk_insert_json(filename)
 

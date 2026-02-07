@@ -1,3 +1,6 @@
+### Author: Greg Miller
+### Class: Modern Software Concepts in Python
+### File purpose: Update the applicants SQL table with newly-parsed and cleaned data
 import sys
 import os
 
@@ -5,7 +8,6 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import psycopg
 from psycopg import OperationalError, sql
-import json
 from datetime import datetime
 #creates db using python so manual db creation in terminal no longer required (only run once to init DB)
 from psycopg.sql import SQL, Identifier
