@@ -1,7 +1,7 @@
 import subprocess
 from module_2.scrape import scrape_data
 from module_2.clean import clean_data
-from load_data import insert_applicants_from_json_batch
+from update_data import insert_applicants_from_json_batch
 import psycopg
 
 def get_newest_p():
@@ -37,12 +37,3 @@ def update_db():
         return 0
     else: 
         return 1
-# def update_db():
-#     flag = 0
-#     while flag == 0:
-
-
-#         print(flag)
-
-
-#update_db()
