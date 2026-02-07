@@ -14,22 +14,6 @@ def connect():
         print(f"The error '{e}' occurred")
     return connection
 
-import psycopg
-from psycopg import OperationalError, sql
-
-def connect():
-    try:
-        connection = psycopg.connect(
-            dbname="applicant_data",
-            user="postgres",
-            password="abc123",
-            host="127.0.0.1",
-            port=5432
-        )
-        return connection
-    except OperationalError as e:
-        print(f"The error '{e}' occurred")
-        return None
 
 def questions(connection):
     with connection.cursor() as cur:
@@ -229,11 +213,11 @@ def questions(connection):
     return answers
 
 # Example usage:
-conn = connect()
-answers_list = questions(conn)
-print(answers_list)
+# conn = connect()
+# answers_list = questions(conn)
+# print(answers_list)
 
 
 # Example usage
-conn = connect()
-questions(conn)
+# conn = connect()
+# questions(conn)

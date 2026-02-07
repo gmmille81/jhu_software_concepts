@@ -1,3 +1,8 @@
+import sys
+import os
+
+# Ensure current folder is in sys.path for imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import psycopg
 from psycopg import OperationalError, sql
 import json
@@ -26,10 +31,10 @@ def create_database(db_name, db_user, db_password, db_host, db_port):
                 cur.execute(
                     SQL("CREATE DATABASE {}").format(Identifier(db_name))
                 )
-                print(f"Database '{db_name}' created successfully.")
+                print("Database '{}' created successfully.".format(db_name))
 
     except OperationalError as e:
-        print(f"The error '{e}' occurred")
+        print("Error '{}' occurred.".format(e))
 
 def create_table():
     """
@@ -74,7 +79,7 @@ def create_table():
                 print("Table 'applicants' created successfully (psycopg3).")
 
     except OperationalError as e:
-        print(f"The error '{e}' occurred")
+        print("Error '{}' occurred.".format(e))
 
 def bulk_insert_json(json_file_path, batch_size=1000):
     """
@@ -183,7 +188,7 @@ def bulk_insert_json(json_file_path, batch_size=1000):
                                 else:
                                     count_duplicates += 1
 
-                            print(f"{count_inserted} records inserted so far...")
+                            #print(f"{count_inserted} records inserted so far...")
                             batch = []
 
                 # Insert any remaining rows
@@ -197,15 +202,14 @@ def bulk_insert_json(json_file_path, batch_size=1000):
                             count_inserted += 1
                         else:
                             count_duplicates += 1
+                    print("'{}' records inserted in total.".format(count_inserted))
 
-                    print(f"{count_inserted} records inserted in total.")
-
-                print(f"Number of duplicates skipped: {count_duplicates}")
+                print("Number of duplicates skipped: '{}'".format(count_duplicates))
 
         print("All records inserted successfully!")
 
     except OperationalError as e:
-        print(f"The error '{e}' occurred")
+        print("Error '{}' occurred.".format(e))
 #Function to append the DB with data from a JSON object (utilitzed in the refresh_data script)
 
 
@@ -214,9 +218,9 @@ def insert_applicants_from_json_batch(entries):
     Inserts a batch of applicant records.
 
     Returns:
-        1 → at least one row hit ON CONFLICT
-        0 → all rows inserted successfully
-       -1 → all rows invalid or a DB error occurred
+        1 - at least one row hit ON CONFLICT
+        0 - all rows inserted successfully
+       -1 - all rows invalid or a DB error occurred
     """
     had_conflict = False
     had_success = False
@@ -305,7 +309,7 @@ def insert_applicants_from_json_batch(entries):
         return -1
 
     except OperationalError as e:
-        print(f"The error '{e}' occurred")
+        print("Error '{}' occurred.".format(e))
         return -1
 
 

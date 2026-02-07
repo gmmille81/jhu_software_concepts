@@ -1,23 +1,23 @@
-
-nav { /* defines for full nav bar*/
+/* ---------- Navigation Bar ---------- */
+nav {
     background-color: #cfe8f6;
     padding: 15px 40px;
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-} 
+}
 
-.nav-container { /* style nav bar to space out option elements*/
+.nav-container {
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
 
-.nav-title { /* defines style for the website title on left side of nav bar*/
+.nav-title {
     font-size: 20px;
     font-weight: 600;
     color: #1f3a4a;
 }
 
-nav ul { /* defines spacing for nav bar items*/
+nav ul {
     list-style: none;
     margin: 0;
     padding: 0;
@@ -25,14 +25,8 @@ nav ul { /* defines spacing for nav bar items*/
     gap: 30px;
 }
 
-nav ul li a { /* defines styling of text within nav options*/
-    color: #1f3a4a;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-nav ul li a { /* defines area that will change color on hover*/
-    display: block;              
+nav ul li a {
+    display: block;
     padding: 8px 14px;
     border-radius: 6px;
     color: #1f3a4a;
@@ -41,38 +35,123 @@ nav ul li a { /* defines area that will change color on hover*/
     transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-nav ul li a:hover { /* makes nav options darker blue on hover*/
-    background-color: #9fcbe8;   
+nav ul li a:hover {
+    background-color: #9fcbe8;
     color: #0f2a3a;
 }
-.main-content{ /* defines style body content section, primarily offset from side of page*/
-    display: flex;
-    padding-right: 5%;
-    justify-content: space-between;
-}
 
-
-.profile-image img{ /* sets image size and puts it on the right side of page*/
-    flex: 1;
-    max-width: 400px; 
-    height: auto;
-    text-align: right;
-}
-
-
-body{ /* makes default lighter color and font size for all area not nav bar*/
+/* ---------- Body ---------- */
+body {
     background-color: #eaf5fc;
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
+    padding: 0;
 }
 
-h1 { /* offset header slightly from edge of page*/
-    padding-left: 5%;
+.content-container {
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 0 20px;
 }
 
-h2 { /* define size of h2*/
-    font-size: large;
+/* ---------- Headers ---------- */
+h1 {
+    margin-bottom: 15px;
+    color: #1f3a4a;
 }
 
-.base-content{ /* offsets content slightly from the edge of page*/
-    padding-left: 5%;
+h3 {
+    margin: 0;
+    color: #0f2a3a;
+}
+
+/* ---------- Status Messages ---------- */
+#message {
+    padding: 12px 18px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+#message.success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+#message.in-progress {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+#message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* ---------- Buttons ---------- */
+.button-group {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-primary {
+    background-color: #1f3a4a;
+    color: #ffffff;
+}
+
+.btn-primary:hover {
+    background-color: #0f2a3a;
+}
+
+.btn-secondary {
+    background-color: #9fcbe8;
+    color: #1f3a4a;
+}
+
+.btn-secondary:hover {
+    background-color: #7ab3d7;
+}
+
+/* ---------- Timestamp ---------- */
+.timestamp {
+    font-size: 0.9em;
+    color: #555;
+    margin-bottom: 20px;
+}
+
+/* ---------- Questions ---------- */
+.questions-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.question-card {
+    background-color: #ffffff;
+    padding: 15px 20px;
+    border-radius: 10px;
+    box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.question-card .answer {
+    margin: 5px 0 0;
+    font-style: italic;
+    color: #333;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 600px) {
+    .button-group {
+        flex-direction: column;
+    }
 }

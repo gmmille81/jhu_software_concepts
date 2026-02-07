@@ -87,13 +87,3 @@ def clean_data(data):
             master_arr.append(master_dict[key])
     return master_arr
 
-# #calls scrape to pull the number of entries specified
-# data = scrape_data(35000)
-# #save data to json file
-# save_data(data,'jhu_software_concepts/module_2/data4.json')
-# #open json file and load as dict
-# data = load_data('jhu_software_concepts/module_2/data4.json')
-# #clean the data
-# data_dict = clean_data(data)
-# #output the cleaned data for later processing for app.py
-# save_data(data_dict,'jhu_software_concepts/module_2/applicant_data.json')

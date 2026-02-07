@@ -27,12 +27,16 @@ def update_db():
     newest_site_p = int(new_data_cleaned[0]['url'].split('/')[-1])
     print(newest_site_p)
     num_data_needed = newest_site_p-get_newest_p()
-    new_data = scrape_data(num_data_needed)
-    new_data_cleaned = clean_data(new_data)
-    #print(len(new_data_cleaned))
-    flag = insert_applicants_from_json_batch(new_data_cleaned)
-    print(flag)
-    print(get_newest_p())
+    if num_data_needed != 0:
+        new_data = scrape_data(num_data_needed)
+        new_data_cleaned = clean_data(new_data)
+        #print(len(new_data_cleaned))
+        flag = insert_applicants_from_json_batch(new_data_cleaned)
+        print(flag)
+        print(get_newest_p())
+        return 0
+    else: 
+        return 1
 # def update_db():
 #     flag = 0
 #     while flag == 0:
@@ -41,4 +45,4 @@ def update_db():
 #         print(flag)
 
 
-update_db()
+#update_db()

@@ -1,16 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
-<head> <!--title with parent block for page specific title elements-->
+<head>
+    <meta charset="UTF-8">
     <title>Greg Miller - {% block title %}{% endblock title %}</title>
-    <link rel="stylesheet" href="static/main.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    {% block head %}{% endblock %}
 </head>
 <body>
-    <nav> <!--nav element for top navigation bar with div elements to handle css-->
-      <a href="{{url_for('index') }}">Saved Applicant Data</a>
+    <!-- Navigation Bar -->
+    <nav>
+        <div class="nav-container">
+            <div class="nav-title">Greg Miller</div>
+            <ul>
+                <li><a href="{{ url_for('index') }}">Saved Applicant Data</a></li>
+            </ul>
+        </div>
     </nav>
-    <hr>
-    <div class="content">
-      {% block content %}{% endblock %}
+
+    <!-- Main content area -->
+    <div class="content-container">
+        {% block content %}{% endblock %}
     </div>
 </body>
 </html>

@@ -1,12 +1,47 @@
-{% extends 'base.html' %} <!-- Links page to parent page (base.html)-->
+{% extends 'base.html' %}
+{% block head %}
+  {{ super() }}  <!-- keep base head content -->
+  {% if db_running %}
+    <meta http-equiv="refresh" content="2">
+  {% endif %}
+{% endblock %}
 
-{% block content %} <!--child for the content block, include all page-specific html content-->
-<h1>{% block title %}Title{% endblock %}</h1>
-
-{% for question in applicant_data%}
-<div class="question">
-  <h3>{{question[0]}}</h3>
-  <i><p>Answer: {{question[1]}}</p></i>
+{% block content %}
+<div class="page-header">
+  <h1>{% block title %}Analysis{% endblock %}</h1>
 </div>
-{%endfor%}
+
+{% if message %}
+<div id="message" class="{% if 'complete' in message.lower() %}success{% elif 'in progress' in message.lower() %}in-progress{% else %}error{% endif %}">
+  {{ message }}
+</div>
+{% endif %}
+
+<!-- Description Section -->
+<div class="description">
+  <p>
+    <strong>Pull Data:</strong> Calculates how many records are missing between the most recent submission on theGradCafe.com and our database. 
+    It will then scrape new records from theGradCafe.com, clean them, and add them to our SQL database for analysis.
+  </p>
+</div>
+
+<!-- Buttons -->
+<div class="button-group">
+  <form action="{{ url_for('update_db_route') }}" method="post">
+    <button type="submit" class="btn btn-primary">Pull Data</button>
+  </form>
+
+  <form action="{{ url_for('update_analysis_route') }}" method="post">
+    <button type="submit" class="btn btn-secondary">Update Analysis</button>
+  </form>
+</div>
+
+<div class="questions-container">
+  {% for question in applicant_data %}
+  <div class="question-card">
+    <h3>{{ question[0] }}</h3>
+    <p class="answer">{{ question[1] }}</p>
+  </div>
+  {% endfor %}
+</div>
 {% endblock %}
