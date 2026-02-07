@@ -43,6 +43,7 @@ def questions(connection):
             "INSERT INTO answers_table (question, answer) VALUES (%s, %s)",
             (question, str(result))
         )
+        print('Fall 2026 Applicants: ', result)
 
         # --- QUERY 2 ---
         question = 'What percentage of entries are from international students (not American or Other) (to two decimal places)?'
@@ -60,7 +61,7 @@ def questions(connection):
             "INSERT INTO answers_table (question, answer) VALUES (%s, %s)",
             (question, str(result))
         )
-
+        print('Percent International: ', result)
         # --- QUERY 3 ---
         question = 'What is the average GPA, GRE, GRE V, GRE AW of applicants who provide these metrics?'
         cur.execute("""
@@ -78,7 +79,7 @@ def questions(connection):
             "INSERT INTO answers_table (question, answer) VALUES (%s, %s)",
             (question, result_str)
         )
-
+        print('Average Stats: ', result_str)
         # --- QUERY 4 ---
         question = 'What is their average GPA of American students in Fall 2026?'
         cur.execute("""
@@ -92,7 +93,7 @@ def questions(connection):
             "INSERT INTO answers_table (question, answer) VALUES (%s, %s)",
             (question, str(result))
         )
-
+        print('AVG GPA of Fall 2026 American Students: ', result)
         # --- QUERY 5 ---
         question = 'What percent of entries for Fall 2026 are Acceptances (to two decimal places)?'
         cur.execute("""
@@ -109,6 +110,7 @@ def questions(connection):
             "INSERT INTO answers_table (question, answer) VALUES (%s, %s)",
             (question, str(result))
         )
+        print('Percent of acceptance for Fall 2026: ', result)
 
         # --- QUERY 6 ---
         question = 'What is the average GPA of applicants who applied for Fall 2026 who are Acceptances?'
@@ -123,7 +125,7 @@ def questions(connection):
             "INSERT INTO answers_table (question, answer) VALUES (%s, %s)",
             (question, str(result))
         )
-
+        print('Avg GPA of Fall 2026 Accepted students: ',result)
         # --- QUERY 7 ---
         question = 'How many entries are from applicants who applied to JHU for a masters degrees in Computer Science?'
         cur.execute("""
@@ -138,7 +140,7 @@ def questions(connection):
             "INSERT INTO answers_table (question, answer) VALUES (%s, %s)",
             (question, str(result))
         )
-
+        print('Number of entries from JHU Comp Sci Masters Applicants: ',result)
         # --- QUERY 8 ---
         question = 'How many entries from 2026 are acceptances from applicants who applied to Georgetown University, MIT, Stanford University, or Carnegie Mellon University for a PhD in Computer Science?'
         cur.execute("""
@@ -156,7 +158,7 @@ def questions(connection):
             "INSERT INTO answers_table (question, answer) VALUES (%s, %s)",
             (question, str(result))
         )
-
+        print('Number of acceptances to Georgetown University, MIT, Stanford University, or Carnegie Mellon for a PhD in Computer Science: ',result)
         # --- QUERY 9 ---
         question = 'Do your numbers for question 8 change if you use LLM Generated Fields?'
         cur.execute("""
@@ -174,7 +176,7 @@ def questions(connection):
             "INSERT INTO answers_table (question, answer) VALUES (%s, %s)",
             (question, str(result))
         )
-
+        print('Same as last question but by using llm fields',result)
         # --- QUERY 10 ---
         question = 'How many unique program names and university names are in the data set?'
         cur.execute("""
@@ -190,7 +192,7 @@ def questions(connection):
             "INSERT INTO answers_table (question, answer) VALUES (%s, %s)",
             (question, result_str)
         )
-
+        print('Number of unique programs and universities in dataset, respectively: ',result_str)
         # --- QUERY 11 ---
         question = 'How many unique llm-generated program names and university names are in the data set?'
         cur.execute("""
@@ -206,7 +208,7 @@ def questions(connection):
             "INSERT INTO answers_table (question, answer) VALUES (%s, %s)",
             (question, result_str)
         )
-
+        print('Number of unique llm-generated programs and universities in dataset, respectively: ',result_str)
         # Commit all inserts
         connection.commit()
 
@@ -219,5 +221,5 @@ def questions(connection):
 
 
 # Example usage
-# conn = connect()
-# questions(conn)
+conn = connect()
+questions(conn)

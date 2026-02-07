@@ -67,26 +67,27 @@ h3 {
 
 /* ---------- Status Messages ---------- */
 #message {
-    padding: 12px 18px;
-    border-radius: 8px;
+    padding: 12px;
+    border-radius: 6px;
     margin-bottom: 20px;
     font-weight: 600;
 }
 
-#message.success {
+.success {
     background-color: #d4edda;
     color: #155724;
 }
 
-#message.in-progress {
+.in-progress {
     background-color: #fff3cd;
     color: #856404;
 }
 
-#message.error {
+.error {
     background-color: #f8d7da;
     color: #721c24;
 }
+
 
 /* ---------- Buttons ---------- */
 .button-group {
@@ -122,6 +123,44 @@ h3 {
     background-color: #7ab3d7;
 }
 
+/* Specific style for top-row buttons */
+.page-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.top-buttons {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.button-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* ---------- Description Stack ---------- */
+.description-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.description {
+    background-color: #f0f8ff;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.95em;
+    line-height: 1.4;
+    color: #1f3a4a;
+}
+
 /* ---------- Timestamp ---------- */
 .timestamp {
     font-size: 0.9em;
@@ -150,8 +189,19 @@ h3 {
 }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 600px) {
-    .button-group {
+@media (max-width: 900px) {
+    .page-header-row {
         flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .top-buttons {
+        flex-direction: row;
+        gap: 15px;
+    }
+
+    .button-block {
+        flex: 1;
     }
 }
