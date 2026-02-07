@@ -209,15 +209,18 @@ def bulk_insert_json(json_file_path, batch_size=1000):
 #Function to append the DB with data from a JSON object (utilitzed in the refresh_data script)
 
 
-def insert_applicant_from_json(entry):
+def insert_applicants_from_json_batch(entries):
     """
-    Inserts a single applicant record into the 'applicants' table from a JSON object.
+    Inserts a batch of applicant records.
+
     Returns:
-        0 if the row was inserted successfully,
-        1 if the row was skipped due to a conflict (p_id already exists),
-       -1 if there was an error or invalid p_id.
-    The 'llm-generated-program' and 'llm-generated-university' fields are always set to ''.
+        1 → at least one row hit ON CONFLICT
+        0 → all rows inserted successfully
+       -1 → all rows invalid or a DB error occurred
     """
+    had_conflict = False
+    had_success = False
+
     try:
         with psycopg.connect(
             dbname="applicant_data",
@@ -228,36 +231,6 @@ def insert_applicant_from_json(entry):
         ) as conn:
             with conn.cursor() as cur:
 
-                # Extract p_id from URL
-                p_id = None
-                url = entry.get("url")
-                if url and "/" in url:
-                    try:
-                        p_id = int(url.rstrip("/").split("/")[-1])
-                    except ValueError:
-                        p_id = None
-
-                if p_id is None:
-                    print("Invalid or missing URL, cannot extract p_id. Row skipped.")
-                    return -1
-
-                # Convert date safely
-                date_val = None
-                if entry.get("date_added"):
-                    try:
-                        date_val = datetime.strptime(entry["date_added"], "%B %d, %Y").date()
-                    except ValueError:
-                        date_val = None
-
-                # Convert numeric fields safely
-                gpa = float(entry.get("GPA")) if entry.get("GPA") else None
-                gre = float(entry.get("GRE Score")) if entry.get("GRE Score") else None
-                gre_v = float(entry.get("GRE V Score")) if entry.get("GRE V Score") else None
-                gre_aw = float(entry.get("GRE AW Score")) if entry.get("GRE AW Score") else None
-
-                program_field = entry.get("program", "")
-
-                # Prepare insert query
                 insert_query = """
                 INSERT INTO applicants (
                     p_id, program, comments, date_added, url, status, term,
@@ -266,44 +239,77 @@ def insert_applicant_from_json(entry):
                 ) VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
-                ON CONFLICT (p_id) DO NOTHING;
+                ON CONFLICT (p_id) DO NOTHING
+                RETURNING p_id;
                 """
 
-                # Execute insert
-                cur.execute(insert_query, (
-                    p_id,
-                    program_field,
-                    entry.get("comments"),
-                    date_val,
-                    url,
-                    entry.get("status"),
-                    entry.get("term"),
-                    entry.get("US/International"),
-                    gpa,
-                    gre,
-                    gre_v,
-                    gre_aw,
-                    entry.get("Degree"),
-                    '',  # always empty string for llm-generated-program
-                    ''   # always empty string for llm-generated-university
-                ))
+                for entry in entries:
+                    # Extract p_id
+                    p_id = None
+                    url = entry.get("url")
+                    if url and "/" in url:
+                        try:
+                            p_id = int(url.rstrip("/").split("/")[-1])
+                        except ValueError:
+                            pass
+
+                    if p_id is None:
+                        continue
+
+                    # Date conversion
+                    date_val = None
+                    if entry.get("date_added"):
+                        try:
+                            date_val = datetime.strptime(
+                                entry["date_added"], "%B %d, %Y"
+                            ).date()
+                        except ValueError:
+                            pass
+
+                    # Numeric conversions
+                    gpa = float(entry.get("GPA")) if entry.get("GPA") else None
+                    gre = float(entry.get("GRE Score")) if entry.get("GRE Score") else None
+                    gre_v = float(entry.get("GRE V Score")) if entry.get("GRE V Score") else None
+                    gre_aw = float(entry.get("GRE AW")) if entry.get("GRE AW") else None
+
+                    cur.execute(insert_query, (
+                        p_id,
+                        entry.get("program", ""),
+                        entry.get("comments"),
+                        date_val,
+                        url,
+                        entry.get("status"),
+                        entry.get("term"),
+                        entry.get("US/International"),
+                        gpa,
+                        gre,
+                        gre_v,
+                        gre_aw,
+                        entry.get("Degree"),
+                        entry.get("llm-generated-program", ""),
+                        entry.get("llm-generated-university", "")
+                    ))
+
+                    if cur.fetchone():
+                        had_success = True
+                    else:
+                        had_conflict = True
+                        #print(f"Conflict detected for p_id: {p_id}")
+
                 conn.commit()
 
-                # Check if insertion happened
-                cur.execute("SELECT 1 FROM applicants WHERE p_id = %s", (p_id,))
-                if cur.fetchone():
-                    # Row exists; ON CONFLICT DO NOTHING ensures pre-existing row means conflict
-                    cur.execute("SELECT COUNT(*) FROM applicants WHERE p_id = %s", (p_id,))
-                    count = cur.fetchone()[0]
-                    return 1 if count > 1 else 0
-                else:
-                    return -1  # unexpected, should not happen
+        if had_conflict:
+            return 1
+        if had_success:
+            return 0
+        return -1
 
     except OperationalError as e:
         print(f"The error '{e}' occurred")
         return -1
 
+
 #create_database("applicant_data", "postgres", "abc123", "127.0.0.1", 5432)
-create_table()
-bulk_insert_json('jhu_software_concepts/module_3/module_2/llm_extend_applicant_data.json')
+#create_table()
+#bulk_insert_json('jhu_software_concepts/module_3/module_2/llm_extend_applicant_data.json')
 
