@@ -46,8 +46,6 @@ def scrape_data(record_count):
                     page_data[counter] = d[i]
                     counter+=1
             page+=1
-
-
     return page_data
 #saves inputted python dict into json file in module2 folder
 def save_data(data_arr,filename):

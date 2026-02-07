@@ -2,6 +2,7 @@
 
 {% block content %} <!--child for the content block, include all page-specific html content-->
 <h1>{% block title %}Title{% endblock %}</h1>
+
 {% for question in applicant_data%}
 <div class="question">
   <h3>{{question[0]}}</h3>
