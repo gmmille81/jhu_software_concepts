@@ -207,9 +207,7 @@ def bulk_insert_json(json_file_path, batch_size=1000):
     except OperationalError as e:
         print(f"The error '{e}' occurred")
 #Function to append the DB with data from a JSON object (utilitzed in the refresh_data script)
-import psycopg
-from psycopg import OperationalError
-from datetime import datetime
+
 
 def insert_applicant_from_json(entry):
     """
