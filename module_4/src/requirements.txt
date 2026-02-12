@@ -1,0 +1,5 @@
+psycopg
+flask
+urllib3
+beautifulsoup4
+certifi

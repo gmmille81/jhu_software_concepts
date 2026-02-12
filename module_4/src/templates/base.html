@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Greg Miller - {% block title %}{% endblock title %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav>
+        <div class="nav-container">
+            <div class="nav-title">Module 3 - Databases and Analysis</div>
+            <ul>
+                <li><a href="{{ url_for('main.index') }}">Saved Applicant Data</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main content area -->
+    <div class="content-container">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
