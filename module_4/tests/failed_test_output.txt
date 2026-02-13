@@ -1,0 +1,708 @@
+..FFFFF.......F....                                                      [100%]
+=================================== FAILURES ===================================
+_______________________ test_update_db_post_returns_200 ________________________
+
+client = <FlaskClient <Flask 'src.app'>>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f48e60a5220>
+
+    @pytest.mark.buttons
+    def test_update_db_post_returns_200(client, monkeypatch):
+        """Verify ``POST /update-db`` ultimately renders successfully.
+    
+        The route starts a subprocess and now renders the analysis page directly.
+        This test stubs the shared page renderer to avoid external database work,
+        then confirms a successful response and validates subprocess launch intent.
+    
+        :param client: Flask test client fixture.
+        :type client: flask.testing.FlaskClient
+        :param monkeypatch: Pytest monkeypatch fixture used to replace ``Popen``.
+        :type monkeypatch: _pytest.monkeypatch.MonkeyPatch
+        """
+    
+        # Route now renders analysis directly; stub shared renderer to avoid DB I/O.
+        monkeypatch.setattr(pages, "_render_analysis_page", lambda: "ok")
+    
+        pages.db_process = None
+        popen_calls = []
+    
+        def fake_popen(*args, **kwargs):
+            popen_calls.append((args, kwargs))
+            return _DummyProcess()
+    
+        monkeypatch.setattr(pages.subprocess, "Popen", fake_popen)
+    
+>       response = client.post("/update-db")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_buttons.py:63: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1167: in post
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/testing.py:235: in open
+    response = super().open(
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/pages.py:133: in update_db_route
+    return _render_analysis_page(), 200
+           ^^^^^^^^^^^^^^^^^^^^^^^
+src/pages.py:68: in _render_analysis_page
+    cur.execute("SELECT * FROM answers_table")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <psycopg.Cursor [no result] [INERROR] (host=127.0.0.1 user=postgres database=applicant_data) at 0x7f48e61fbdd0>
+query = 'SELECT * FROM answers_table', params = None
+
+    def execute(
+        self,
+        query: Query,
+        params: Params | None = None,
+        *,
+        prepare: bool | None = None,
+        binary: bool | None = None,
+    ) -> Self:
+        """
+        Execute a query or command to the database.
+        """
+        try:
+            with self._conn.lock:
+                self._conn.wait(
+                    self._execute_gen(query, params, prepare=prepare, binary=binary)
+                )
+        except e._NO_TRACEBACK as ex:
+>           raise ex.with_traceback(None)
+E           psycopg.errors.UndefinedTable: relation "answers_table" does not exist
+E           LINE 1: SELECT * FROM answers_table
+E                                 ^
+
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/psycopg/cursor.py:117: UndefinedTable
+_______________ test_update_db_post_runs_refresh_data_update_db ________________
+
+client = <FlaskClient <Flask 'src.app'>>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f48e6053170>
+
+    @pytest.mark.buttons
+    def test_update_db_post_runs_refresh_data_update_db(client, monkeypatch):
+        """Verify the update flow reaches ``refresh_data.update_db``.
+    
+        The production route starts ``update_db.py`` in a subprocess; this test
+        replaces ``Popen`` with a local stub that invokes ``refresh_data.update_db``
+        so the call path can be asserted within the test process.
+    
+        :param client: Flask test client fixture.
+        :type client: flask.testing.FlaskClient
+        :param monkeypatch: Pytest monkeypatch fixture used for function stubbing.
+        :type monkeypatch: _pytest.monkeypatch.MonkeyPatch
+        """
+    
+        pages.db_process = None
+    
+        check_function_called = {"called": False}
+    
+        def fake_update_db():
+            check_function_called["called"] = True
+            return 0
+    
+        def fake_popen(*_args, **_kwargs):
+            # Simulate the subprocess target so we can validate the update function call.
+            refresh_data.update_db()
+            return _DummyProcess()
+    
+        monkeypatch.setattr(refresh_data, "update_db", fake_update_db)
+        monkeypatch.setattr(pages.subprocess, "Popen", fake_popen)
+        monkeypatch.setattr(pages, "_render_analysis_page", lambda: "ok")
+    
+>       response = client.post("/update-db")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_buttons.py:101: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1167: in post
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/testing.py:235: in open
+    response = super().open(
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/pages.py:118: in update_db_route
+    return _render_analysis_page(), 409
+           ^^^^^^^^^^^^^^^^^^^^^^^
+src/pages.py:68: in _render_analysis_page
+    cur.execute("SELECT * FROM answers_table")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <psycopg.Cursor [no result] [INERROR] (host=127.0.0.1 user=postgres database=applicant_data) at 0x7f48e61fb7d0>
+query = 'SELECT * FROM answers_table', params = None
+
+    def execute(
+        self,
+        query: Query,
+        params: Params | None = None,
+        *,
+        prepare: bool | None = None,
+        binary: bool | None = None,
+    ) -> Self:
+        """
+        Execute a query or command to the database.
+        """
+        try:
+            with self._conn.lock:
+                self._conn.wait(
+                    self._execute_gen(query, params, prepare=prepare, binary=binary)
+                )
+        except e._NO_TRACEBACK as ex:
+>           raise ex.with_traceback(None)
+E           psycopg.errors.UndefinedTable: relation "answers_table" does not exist
+E           LINE 1: SELECT * FROM answers_table
+E                                 ^
+
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/psycopg/cursor.py:117: UndefinedTable
+_____________ test_update_analysis_post_returns_200_when_not_busy ______________
+
+client = <FlaskClient <Flask 'src.app'>>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f48e60e5070>
+
+    @pytest.mark.buttons
+    def test_update_analysis_post_returns_200_when_not_busy(client, monkeypatch):
+        """Verify ``POST /update_analysis`` succeeds when DB update is not running.
+    
+        The route should run analysis and render the analysis page directly. This
+        test keeps execution local by stubbing DB-dependent functions and the shared
+        renderer, then asserts a ``200`` response.
+    
+        :param client: Flask test client fixture.
+        :type client: flask.testing.FlaskClient
+        :param monkeypatch: Pytest monkeypatch fixture used for function stubbing.
+        :type monkeypatch: _pytest.monkeypatch.MonkeyPatch
+        """
+    
+        pages.db_process = None
+        check_analysis_called = {"called": False}
+    
+        def fake_connect():
+            # Route calls connect() before questions(); return a harmless object so
+            # this test validates control flow without requiring a live database.
+            return object()
+    
+        def fake_questions(_conn):
+            check_analysis_called["called"] = True
+    
+        monkeypatch.setattr(pages, "connect", fake_connect)
+        monkeypatch.setattr(pages, "questions", fake_questions)
+        monkeypatch.setattr(pages, "_render_analysis_page", lambda: "ok")
+    
+>       response = client.post("/update_analysis")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_buttons.py:136: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1167: in post
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/testing.py:235: in open
+    response = super().open(
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/pages.py:151: in update_analysis_route
+    return _render_analysis_page(), 409
+           ^^^^^^^^^^^^^^^^^^^^^^^
+src/pages.py:68: in _render_analysis_page
+    cur.execute("SELECT * FROM answers_table")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <psycopg.Cursor [no result] [INERROR] (host=127.0.0.1 user=postgres database=applicant_data) at 0x7f48e5ea8590>
+query = 'SELECT * FROM answers_table', params = None
+
+    def execute(
+        self,
+        query: Query,
+        params: Params | None = None,
+        *,
+        prepare: bool | None = None,
+        binary: bool | None = None,
+    ) -> Self:
+        """
+        Execute a query or command to the database.
+        """
+        try:
+            with self._conn.lock:
+                self._conn.wait(
+                    self._execute_gen(query, params, prepare=prepare, binary=binary)
+                )
+        except e._NO_TRACEBACK as ex:
+>           raise ex.with_traceback(None)
+E           psycopg.errors.UndefinedTable: relation "answers_table" does not exist
+E           LINE 1: SELECT * FROM answers_table
+E                                 ^
+
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/psycopg/cursor.py:117: UndefinedTable
+__________ test_update_analysis_post_returns_409_when_busy_no_update ___________
+
+client = <FlaskClient <Flask 'src.app'>>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f48e60a6030>
+
+    @pytest.mark.buttons
+    def test_update_analysis_post_returns_409_when_busy_no_update(client, monkeypatch):
+        """Verify busy-state ``POST /update_analysis`` returns ``409``.
+    
+        When a database update process is active, analysis should not run. This
+        test asserts the route returns conflict and that query execution is skipped.
+    
+        :param client: Flask test client fixture.
+        :type client: flask.testing.FlaskClient
+        :param monkeypatch: Pytest monkeypatch fixture used for function stubbing.
+        :type monkeypatch: _pytest.monkeypatch.MonkeyPatch
+        """
+    
+        pages.db_process = _DummyProcess()
+        check_analysis_called = {"called": False}
+    
+        def fake_questions(_conn):
+            check_analysis_called["called"] = True
+    
+        monkeypatch.setattr(pages, "questions", fake_questions)
+        monkeypatch.setattr(pages, "_render_analysis_page", lambda: "busy")
+    
+>       response = client.post("/update_analysis")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_buttons.py:164: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1167: in post
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/testing.py:235: in open
+    response = super().open(
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/pages.py:151: in update_analysis_route
+    return _render_analysis_page(), 409
+           ^^^^^^^^^^^^^^^^^^^^^^^
+src/pages.py:68: in _render_analysis_page
+    cur.execute("SELECT * FROM answers_table")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <psycopg.Cursor [no result] [INERROR] (host=127.0.0.1 user=postgres database=applicant_data) at 0x7f48e61fb350>
+query = 'SELECT * FROM answers_table', params = None
+
+    def execute(
+        self,
+        query: Query,
+        params: Params | None = None,
+        *,
+        prepare: bool | None = None,
+        binary: bool | None = None,
+    ) -> Self:
+        """
+        Execute a query or command to the database.
+        """
+        try:
+            with self._conn.lock:
+                self._conn.wait(
+                    self._execute_gen(query, params, prepare=prepare, binary=binary)
+                )
+        except e._NO_TRACEBACK as ex:
+>           raise ex.with_traceback(None)
+E           psycopg.errors.UndefinedTable: relation "answers_table" does not exist
+E           LINE 1: SELECT * FROM answers_table
+E                                 ^
+
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/psycopg/cursor.py:117: UndefinedTable
+__________________ test_update_db_post_returns_409_when_busy ___________________
+
+client = <FlaskClient <Flask 'src.app'>>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f48e60e78c0>
+
+    @pytest.mark.buttons
+    def test_update_db_post_returns_409_when_busy(client, monkeypatch):
+        """Verify busy-state ``POST /update-db`` returns ``409``.
+    
+        When an update process is already running, the route must not start another
+        subprocess and should respond with conflict.
+    
+        :param client: Flask test client fixture.
+        :type client: flask.testing.FlaskClient
+        :param monkeypatch: Pytest monkeypatch fixture used for function stubbing.
+        :type monkeypatch: _pytest.monkeypatch.MonkeyPatch
+        """
+    
+        pages.db_process = _DummyProcess()
+        popen_called = {"called": False}
+    
+        def fake_popen(*_args, **_kwargs):
+            popen_called["called"] = True
+            return _DummyProcess()
+    
+        monkeypatch.setattr(pages.subprocess, "Popen", fake_popen)
+        monkeypatch.setattr(pages, "_render_analysis_page", lambda: "busy")
+    
+>       response = client.post("/update-db")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_buttons.py:193: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1167: in post
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/testing.py:235: in open
+    response = super().open(
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/pages.py:118: in update_db_route
+    return _render_analysis_page(), 409
+           ^^^^^^^^^^^^^^^^^^^^^^^
+src/pages.py:68: in _render_analysis_page
+    cur.execute("SELECT * FROM answers_table")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <psycopg.Cursor [no result] [INERROR] (host=127.0.0.1 user=postgres database=applicant_data) at 0x7f48e61fbe90>
+query = 'SELECT * FROM answers_table', params = None
+
+    def execute(
+        self,
+        query: Query,
+        params: Params | None = None,
+        *,
+        prepare: bool | None = None,
+        binary: bool | None = None,
+    ) -> Self:
+        """
+        Execute a query or command to the database.
+        """
+        try:
+            with self._conn.lock:
+                self._conn.wait(
+                    self._execute_gen(query, params, prepare=prepare, binary=binary)
+                )
+        except e._NO_TRACEBACK as ex:
+>           raise ex.with_traceback(None)
+E           psycopg.errors.UndefinedTable: relation "answers_table" does not exist
+E           LINE 1: SELECT * FROM answers_table
+E                                 ^
+
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/psycopg/cursor.py:117: UndefinedTable
+________________________________ test_page_load ________________________________
+
+client = <FlaskClient <Flask 'src.app'>>
+
+    @pytest.mark.web
+    
+    def test_page_load(client):
+>       response = client.get("/analysis")
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_flask_page.py:15: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1162: in get
+    return self.open(*args, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/testing.py:235: in open
+    response = super().open(
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1116: in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:988: in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/werkzeug/test.py:1264: in run_wsgi_app
+    app_rv = app(environ, start_response)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1536: in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1514: in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:1511: in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:919: in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:917: in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/flask/app.py:902: in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/pages.py:100: in index
+    return _render_analysis_page()
+           ^^^^^^^^^^^^^^^^^^^^^^^
+src/pages.py:68: in _render_analysis_page
+    cur.execute("SELECT * FROM answers_table")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <psycopg.Cursor [no result] [INERROR] (host=127.0.0.1 user=postgres database=applicant_data) at 0x7f48e5ea99d0>
+query = 'SELECT * FROM answers_table', params = None
+
+    def execute(
+        self,
+        query: Query,
+        params: Params | None = None,
+        *,
+        prepare: bool | None = None,
+        binary: bool | None = None,
+    ) -> Self:
+        """
+        Execute a query or command to the database.
+        """
+        try:
+            with self._conn.lock:
+                self._conn.wait(
+                    self._execute_gen(query, params, prepare=prepare, binary=binary)
+                )
+        except e._NO_TRACEBACK as ex:
+>           raise ex.with_traceback(None)
+E           psycopg.errors.UndefinedTable: relation "answers_table" does not exist
+E           LINE 1: SELECT * FROM answers_table
+E                                 ^
+
+/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/psycopg/cursor.py:117: UndefinedTable
+=============================== warnings summary ===============================
+../../../../../../opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/_pytest/config/__init__.py:1428
+  /opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/_pytest/config/__init__.py:1428: PytestConfigWarning: Unknown config option: analysis
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+../../../../../../opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/_pytest/config/__init__.py:1428
+  /opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/_pytest/config/__init__.py:1428: PytestConfigWarning: Unknown config option: buttons
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+../../../../../../opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/_pytest/config/__init__.py:1428
+  /opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/_pytest/config/__init__.py:1428: PytestConfigWarning: Unknown config option: db
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+../../../../../../opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/_pytest/config/__init__.py:1428
+  /opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/_pytest/config/__init__.py:1428: PytestConfigWarning: Unknown config option: integration
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+../../../../../../opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/_pytest/config/__init__.py:1428
+  /opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages/_pytest/config/__init__.py:1428: PytestConfigWarning: Unknown config option: web
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+tests/test_analysis_format.py:62
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_analysis_format.py:62: PytestUnknownMarkWarning: Unknown pytest.mark.analysis - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.analysis
+
+tests/test_analysis_format.py:105
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_analysis_format.py:105: PytestUnknownMarkWarning: Unknown pytest.mark.analysis - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.analysis
+
+tests/test_buttons.py:37
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_buttons.py:37: PytestUnknownMarkWarning: Unknown pytest.mark.buttons - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.buttons
+
+tests/test_buttons.py:70
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_buttons.py:70: PytestUnknownMarkWarning: Unknown pytest.mark.buttons - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.buttons
+
+tests/test_buttons.py:107
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_buttons.py:107: PytestUnknownMarkWarning: Unknown pytest.mark.buttons - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.buttons
+
+tests/test_buttons.py:142
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_buttons.py:142: PytestUnknownMarkWarning: Unknown pytest.mark.buttons - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.buttons
+
+tests/test_buttons.py:170
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_buttons.py:170: PytestUnknownMarkWarning: Unknown pytest.mark.buttons - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.buttons
+
+tests/test_db_insert.py:89
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_db_insert.py:89: PytestUnknownMarkWarning: Unknown pytest.mark.db - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.db
+
+tests/test_db_insert.py:177
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_db_insert.py:177: PytestUnknownMarkWarning: Unknown pytest.mark.db - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.db
+
+tests/test_db_insert.py:266
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_db_insert.py:266: PytestUnknownMarkWarning: Unknown pytest.mark.db - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.db
+
+tests/test_db_insert.py:377
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_db_insert.py:377: PytestUnknownMarkWarning: Unknown pytest.mark.db - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.db
+
+tests/test_db_insert.py:505
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_db_insert.py:505: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/test_db_insert.py:560
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_db_insert.py:560: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/test_flask_page.py:6
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_flask_page.py:6: PytestUnknownMarkWarning: Unknown pytest.mark.web - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.web
+
+tests/test_flask_page.py:12
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_flask_page.py:12: PytestUnknownMarkWarning: Unknown pytest.mark.web - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.web
+
+tests/test_integration_end_to_end.py:13
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_integration_end_to_end.py:13: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/test_integration_end_to_end.py:31
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_integration_end_to_end.py:31: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/test_integration_end_to_end.py:62
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_integration_end_to_end.py:62: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+tests/test_integration_end_to_end.py:125
+  /home/runner/work/jhu_software_concepts/jhu_software_concepts/module_4/tests/test_integration_end_to_end.py:125: PytestUnknownMarkWarning: Unknown pytest.mark.integration - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.integration
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_buttons.py::test_update_db_post_returns_200 - psycopg.errors.UndefinedTable: relation "answers_table" does not exist
+LINE 1: SELECT * FROM answers_table
+                      ^
+FAILED tests/test_buttons.py::test_update_db_post_runs_refresh_data_update_db - psycopg.errors.UndefinedTable: relation "answers_table" does not exist
+LINE 1: SELECT * FROM answers_table
+                      ^
+FAILED tests/test_buttons.py::test_update_analysis_post_returns_200_when_not_busy - psycopg.errors.UndefinedTable: relation "answers_table" does not exist
+LINE 1: SELECT * FROM answers_table
+                      ^
+FAILED tests/test_buttons.py::test_update_analysis_post_returns_409_when_busy_no_update - psycopg.errors.UndefinedTable: relation "answers_table" does not exist
+LINE 1: SELECT * FROM answers_table
+                      ^
+FAILED tests/test_buttons.py::test_update_db_post_returns_409_when_busy - psycopg.errors.UndefinedTable: relation "answers_table" does not exist
+LINE 1: SELECT * FROM answers_table
+                      ^
+FAILED tests/test_flask_page.py::test_page_load - psycopg.errors.UndefinedTable: relation "answers_table" does not exist
+LINE 1: SELECT * FROM answers_table
+                      ^
+6 failed, 13 passed, 24 warnings in 0.87s

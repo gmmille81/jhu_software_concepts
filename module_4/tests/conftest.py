@@ -232,3 +232,34 @@ def reset_real_applicants_table(real_postgres_ready, postgres_connect_kwargs):
         with conn.cursor() as cur:
             cur.execute("TRUNCATE TABLE applicants;")
         conn.commit()
+
+
+@pytest.fixture()
+def seeded_answers_table(real_postgres_ready, postgres_connect_kwargs):
+    """Ensure answers_table exists with at least one row for analysis page tests."""
+    with psycopg.connect(**postgres_connect_kwargs) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS answers_table (
+                    question TEXT,
+                    answer TEXT
+                );
+                """
+            )
+            cur.execute("TRUNCATE TABLE answers_table;")
+            cur.execute(
+                """
+                INSERT INTO answers_table (question, answer)
+                VALUES (%s, %s)
+                """,
+                ("Seeded question", "Seeded answer"),
+            )
+        conn.commit()
+
+    yield
+
+    with psycopg.connect(**postgres_connect_kwargs) as conn:
+        with conn.cursor() as cur:
+            cur.execute("TRUNCATE TABLE answers_table;")
+        conn.commit()
