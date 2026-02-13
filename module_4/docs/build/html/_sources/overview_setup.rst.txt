@@ -30,6 +30,15 @@ Before starting the Flask app, initialize a baseline SQL database:
    cd module_4
    python3 src/load_data.py
 
+If this is the first run (or ``answers_table`` is empty), run:
+
+.. code-block:: bash
+
+   cd module_4
+   python3 src/query_data.py
+
+This precomputes initial analysis answers so values are visible immediately on ``/analysis``.
+
 .. code-block:: bash
 
    cd module_4

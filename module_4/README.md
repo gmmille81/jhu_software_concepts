@@ -28,6 +28,9 @@ To Run:
 - Initialize baseline SQL data:
   - `python3 src/load_data.py`
   - This creates/resets `applicants` and bulk-loads baseline rows from `src/module_2/llm_extend_applicant_data.json`.
+- If this is the first run (or `answers_table` is empty), initialize analysis answers:
+  - `python3 src/query_data.py`
+  - This computes and stores initial answers so `/analysis` shows values immediately.
 - Start the Flask app:
   - `python3 src/app.py`
   - App runs at `http://127.0.0.1:8080/analysis`

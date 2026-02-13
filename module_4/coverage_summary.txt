@@ -1,0 +1,28 @@
+================================ tests coverage ================================
+_______________ coverage: platform darwin, python 3.12.2-final-0 _______________
+
+Name                                            Stmts   Miss  Cover   Missing
+-----------------------------------------------------------------------------
+module_4/src/__init__.py                            0      0   100%
+module_4/src/app.py                                11      0   100%
+module_4/src/db_config.py                           6      0   100%
+module_4/src/load_data.py                          97      0   100%
+module_4/src/module_2/__init__.py                   0      0   100%
+module_4/src/module_2/clean.py                     65      0   100%
+module_4/src/module_2/scrape.py                    41      0   100%
+module_4/src/pages.py                              82      0   100%
+module_4/src/query_data.py                         91      0   100%
+module_4/src/refresh_data.py                       24      0   100%
+module_4/src/update_data.py                        48      0   100%
+module_4/src/update_db.py                           6      0   100%
+module_4/tests/conftest.py                        134      0   100%
+module_4/tests/test_additional_module_cov.py      727      0   100%
+module_4/tests/test_analysis_format.py             63      0   100%
+module_4/tests/test_buttons.py                     98      0   100%
+module_4/tests/test_db_insert.py                   66      0   100%
+module_4/tests/test_flask_page.py                  22      0   100%
+module_4/tests/test_integration_end_to_end.py     239      0   100%
+-----------------------------------------------------------------------------
+TOTAL                                            1820      0   100%
+======================= 66 passed, 124 warnings in 4.24s =======================
+gregmiller@Gregs-MBP jhu_software_concepts % 
