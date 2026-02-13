@@ -1,0 +1,391 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>query_data &mdash; Modern Software Concepts in Python Module 4 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Modern Software Concepts in Python Module 4
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview_setup.html">Overview &amp; Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../testing_guide.html">Testing Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Modern Software Concepts in Python Module 4</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">query_data</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for query_data</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">psycopg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">psycopg</span><span class="w"> </span><span class="kn">import</span> <span class="n">OperationalError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">db_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_db_connect_kwargs</span>
+
+
+<div class="viewcode-block" id="connect">
+<a class="viewcode-back" href="../api_reference.html#query_data.connect">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">connect</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Establish and return a connection to the PostgreSQL database.</span>
+
+<span class="sd">    This function attempts to connect using psycopg and returns</span>
+<span class="sd">    the connection object so it can be reused by other functions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># Attempt to open a connection to the PostgreSQL database</span>
+        <span class="n">connection</span> <span class="o">=</span> <span class="n">psycopg</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="o">**</span><span class="n">get_db_connect_kwargs</span><span class="p">())</span>
+    <span class="k">except</span> <span class="n">OperationalError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="c1"># Print an error message if the database connection fails</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The error &#39;</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&#39; occurred&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Return the database connection object</span>
+    <span class="k">return</span> <span class="n">connection</span></div>
+
+
+
+<div class="viewcode-block" id="questions">
+<a class="viewcode-back" href="../api_reference.html#query_data.questions">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">questions</span><span class="p">(</span><span class="n">connection</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Run a series of analytical SQL queries against the applicants table.</span>
+
+<span class="sd">    This function:</span>
+<span class="sd">    - Recreates the answers_table</span>
+<span class="sd">    - Executes multiple analysis queries</span>
+<span class="sd">    - Stores each question and its answer in answers_table</span>
+<span class="sd">    - Returns all question–answer pairs for use in Flask</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Open a database cursor using a context manager</span>
+    <span class="k">with</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+
+        <span class="c1"># Remove any existing answers table so results are always fresh</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;DROP TABLE IF EXISTS answers_table;&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Create a new table to store analysis questions and answers</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            CREATE TABLE answers_table (</span>
+<span class="s2">                question TEXT,</span>
+<span class="s2">                answer TEXT</span>
+<span class="s2">            );</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+        <span class="c1"># List used to collect answers for returning to the caller</span>
+        <span class="n">answers</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># --- QUERY 1 ---</span>
+        <span class="c1"># Count how many applicants applied for Fall 2026</span>
+        <span class="n">question</span> <span class="o">=</span> <span class="s1">&#39;How many entries do you have in your database who have applied for Fall 2026?&#39;</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT COUNT(p_id)</span>
+<span class="s2">            FROM applicants</span>
+<span class="s2">            WHERE term = &#39;Fall 2026&#39;;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">answers</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">)])</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="s2">&quot;INSERT INTO answers_table (question, answer) VALUES (</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Fall 2026 Applicants: &#39;</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+
+        <span class="c1"># --- QUERY 2 ---</span>
+        <span class="c1"># Calculate percentage of applicants who are international students</span>
+        <span class="n">question</span> <span class="o">=</span> <span class="s1">&#39;What percentage of entries are from international students (not American or Other) (to two decimal places)?&#39;</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT ROUND(</span>
+<span class="s2">                100.0 * COUNT(*) FILTER (WHERE us_or_international NOT IN (&#39;American&#39;, &#39;Other&#39;))</span>
+<span class="s2">                / COUNT(*),</span>
+<span class="s2">                2</span>
+<span class="s2">            )</span>
+<span class="s2">            FROM applicants;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">answers</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">)])</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="s2">&quot;INSERT INTO answers_table (question, answer) VALUES (</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Percent International: &#39;</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+
+        <span class="c1"># --- QUERY 3 ---</span>
+        <span class="c1"># Compute average GPA and GRE metrics for applicants who provided them</span>
+        <span class="n">question</span> <span class="o">=</span> <span class="s1">&#39;What is the average GPA, GRE, GRE V, GRE AW of applicants who provide these metrics?&#39;</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT</span>
+<span class="s2">                ROUND(AVG(gpa)::numeric, 2),</span>
+<span class="s2">                ROUND(AVG(gre)::numeric, 2),</span>
+<span class="s2">                ROUND(AVG(gre_v)::numeric, 2),</span>
+<span class="s2">                ROUND(AVG(gre_aw)::numeric, 2)</span>
+<span class="s2">            FROM applicants;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">avg_gpa</span><span class="p">,</span> <span class="n">avg_gre</span><span class="p">,</span> <span class="n">avg_gre_v</span><span class="p">,</span> <span class="n">avg_gre_aw</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+
+        <span class="n">result_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;GPA: </span><span class="si">{</span><span class="n">avg_gpa</span><span class="si">}</span><span class="s2"> GRE: </span><span class="si">{</span><span class="n">avg_gre</span><span class="si">}</span><span class="s2"> GRE V: </span><span class="si">{</span><span class="n">avg_gre_v</span><span class="si">}</span><span class="s2"> GRE AW: </span><span class="si">{</span><span class="n">avg_gre_aw</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="n">answers</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">question</span><span class="p">,</span> <span class="n">result_str</span><span class="p">])</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="s2">&quot;INSERT INTO answers_table (question, answer) VALUES (</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="n">result_str</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Average Stats: &#39;</span><span class="p">,</span> <span class="n">result_str</span><span class="p">)</span>
+
+        <span class="c1"># --- QUERY 4 ---</span>
+        <span class="c1"># Calculate the average GPA of American applicants for Fall 2026</span>
+        <span class="n">question</span> <span class="o">=</span> <span class="s1">&#39;What is their average GPA of American students in Fall 2026?&#39;</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT ROUND(AVG(gpa)::numeric, 2)</span>
+<span class="s2">            FROM applicants</span>
+<span class="s2">            WHERE us_or_international = &#39;American&#39; AND term = &#39;Fall 2026&#39;;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">answers</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">)])</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="s2">&quot;INSERT INTO answers_table (question, answer) VALUES (</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;AVG GPA of Fall 2026 American Students: &#39;</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+
+        <span class="c1"># --- QUERY 5 ---</span>
+        <span class="c1"># Compute the acceptance percentage for Fall 2026 applicants</span>
+        <span class="n">question</span> <span class="o">=</span> <span class="s1">&#39;What percent of entries for Fall 2026 are Acceptances (to two decimal places)?&#39;</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT ROUND(</span>
+<span class="s2">                100.0 * COUNT(*) FILTER (WHERE term = &#39;Fall 2026&#39; AND status = &#39;Accepted&#39;)</span>
+<span class="s2">                / COUNT(*),</span>
+<span class="s2">                2</span>
+<span class="s2">            )</span>
+<span class="s2">            FROM applicants;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">answers</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">)])</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="s2">&quot;INSERT INTO answers_table (question, answer) VALUES (</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Percent of acceptance for Fall 2026: &#39;</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+
+        <span class="c1"># --- QUERY 6 ---</span>
+        <span class="c1"># Calculate average GPA of accepted applicants for Fall 2026</span>
+        <span class="n">question</span> <span class="o">=</span> <span class="s1">&#39;What is the average GPA of applicants who applied for Fall 2026 who are Acceptances?&#39;</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT ROUND(AVG(gpa)::numeric, 2)</span>
+<span class="s2">            FROM applicants</span>
+<span class="s2">            WHERE status = &#39;Accepted&#39; AND term = &#39;Fall 2026&#39;;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">answers</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">)])</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="s2">&quot;INSERT INTO answers_table (question, answer) VALUES (</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Avg GPA of Fall 2026 Accepted students: &#39;</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+
+        <span class="c1"># --- QUERY 7 ---</span>
+        <span class="c1"># Count applicants applying to JHU for a Master&#39;s in Computer Science</span>
+        <span class="n">question</span> <span class="o">=</span> <span class="s1">&#39;How many entries are from applicants who applied to JHU for a masters degrees in Computer Science?&#39;</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT COUNT(p_id)</span>
+<span class="s2">            FROM applicants</span>
+<span class="s2">            WHERE degree = &#39;Masters&#39;</span>
+<span class="s2">            AND program = &#39;Computer Science, Johns Hopkins University&#39;;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">answers</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">)])</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="s2">&quot;INSERT INTO answers_table (question, answer) VALUES (</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of entries from JHU Comp Sci Masters Applicants: &#39;</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+
+        <span class="c1"># --- QUERY 8 ---</span>
+        <span class="c1"># Count PhD acceptances in CS at selected universities during 2026</span>
+        <span class="n">question</span> <span class="o">=</span> <span class="s1">&#39;How many entries from 2026 are acceptances from applicants who applied to Georgetown University, MIT, Stanford University, or Carnegie Mellon University for a PhD in Computer Science?&#39;</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT COUNT(*)</span>
+<span class="s2">            FROM applicants</span>
+<span class="s2">            WHERE status = &#39;Accepted&#39;</span>
+<span class="s2">            AND EXTRACT(YEAR FROM date_added) = 2026</span>
+<span class="s2">            AND degree = &#39;PhD&#39;</span>
+<span class="s2">            AND TRIM(SPLIT_PART(program, &#39;,&#39;, 2)) IN (&#39;Georgetown University&#39;, &#39;MIT&#39;, &#39;Stanford University&#39;, &#39;Carnegie Mellon University&#39;)</span>
+<span class="s2">            AND TRIM(SPLIT_PART(program, &#39;,&#39;, 1)) = &#39;Computer Science&#39;;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">answers</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">)])</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="s2">&quot;INSERT INTO answers_table (question, answer) VALUES (</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of acceptances to Georgetown University, MIT, Stanford University, or Carnegie Mellon for a PhD in Computer Science: &#39;</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+
+        <span class="c1"># --- QUERY 9 ---</span>
+        <span class="c1"># Repeat Query 8 using LLM-generated program and university fields</span>
+        <span class="n">question</span> <span class="o">=</span> <span class="s1">&#39;Do your numbers for question 8 change if you use LLM Generated Fields?&#39;</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT COUNT(*)</span>
+<span class="s2">            FROM applicants</span>
+<span class="s2">            WHERE status = &#39;Accepted&#39;</span>
+<span class="s2">            AND EXTRACT(YEAR FROM date_added) = 2026</span>
+<span class="s2">            AND degree = &#39;PhD&#39;</span>
+<span class="s2">            AND llm_generated_program = &#39;Computer Science&#39;</span>
+<span class="s2">            AND llm_generated_university IN (&#39;Georgetown University&#39;, &#39;MIT&#39;, &#39;Stanford University&#39;, &#39;Carnegie Mellon University&#39;);</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">answers</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">)])</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="s2">&quot;INSERT INTO answers_table (question, answer) VALUES (</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Same as last question but by using llm fields&#39;</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+
+        <span class="c1"># --- QUERY 10 ---</span>
+        <span class="c1"># Count unique program and university names from raw program strings</span>
+        <span class="n">question</span> <span class="o">=</span> <span class="s1">&#39;How many unique program names and university names are in the data set?&#39;</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT </span>
+<span class="s2">                COUNT(DISTINCT TRIM(SPLIT_PART(program, &#39;,&#39;, 1))),</span>
+<span class="s2">                COUNT(DISTINCT TRIM(SPLIT_PART(program, &#39;,&#39;, 2)))</span>
+<span class="s2">            FROM applicants;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">unique_programs</span><span class="p">,</span> <span class="n">unique_universities</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+
+        <span class="n">result_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">unique_programs</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">unique_universities</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">answers</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">question</span><span class="p">,</span> <span class="n">result_str</span><span class="p">])</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="s2">&quot;INSERT INTO answers_table (question, answer) VALUES (</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="n">result_str</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of unique programs and universities in dataset, respectively: &#39;</span><span class="p">,</span> <span class="n">result_str</span><span class="p">)</span>
+
+        <span class="c1"># --- QUERY 11 ---</span>
+        <span class="c1"># Count unique program and university names from LLM-generated fields</span>
+        <span class="n">question</span> <span class="o">=</span> <span class="s1">&#39;How many unique llm-generated program names and university names are in the data set?&#39;</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT </span>
+<span class="s2">                COUNT(DISTINCT llm_generated_program),</span>
+<span class="s2">                COUNT(DISTINCT llm_generated_university)</span>
+<span class="s2">            FROM applicants;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">unique_programs</span><span class="p">,</span> <span class="n">unique_universities</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+
+        <span class="n">result_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">unique_programs</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">unique_universities</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">answers</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">question</span><span class="p">,</span> <span class="n">result_str</span><span class="p">])</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="s2">&quot;INSERT INTO answers_table (question, answer) VALUES (</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="p">(</span><span class="n">question</span><span class="p">,</span> <span class="n">result_str</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of unique llm-generated programs and universities in dataset, respectively: &#39;</span><span class="p">,</span> <span class="n">result_str</span><span class="p">)</span>
+
+        <span class="c1"># Commit all inserted answers to the database</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="c1"># Return list of question–answer pairs</span>
+    <span class="k">return</span> <span class="n">answers</span></div>
+
+
+
+<span class="c1"># Allow this file to be executed directly for testing purposes</span>
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../api_reference.html#query_data.main">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">connect</span><span class="p">()</span>
+    <span class="n">questions</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Greg Miller.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

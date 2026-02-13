@@ -1,0 +1,331 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>load_data &mdash; Modern Software Concepts in Python Module 4 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Modern Software Concepts in Python Module 4
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview_setup.html">Overview &amp; Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../testing_guide.html">Testing Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Modern Software Concepts in Python Module 4</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">load_data</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for load_data</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Create/reset applicants schema and bulk-load baseline JSON data.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="c1"># Ensure current folder is in sys.path for imports</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)))</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">psycopg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">psycopg</span><span class="w"> </span><span class="kn">import</span> <span class="n">OperationalError</span><span class="p">,</span> <span class="n">sql</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="c1">#creates db using python so manual db creation in terminal no longer required (only run once to init DB)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">psycopg.sql</span><span class="w"> </span><span class="kn">import</span> <span class="n">SQL</span><span class="p">,</span> <span class="n">Identifier</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">db_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_db_connect_kwargs</span>
+
+<div class="viewcode-block" id="create_database">
+<a class="viewcode-back" href="../api_reference.html#load_data.create_database">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_database</span><span class="p">(</span><span class="n">db_name</span><span class="p">,</span> <span class="n">db_user</span><span class="p">,</span> <span class="n">db_password</span><span class="p">,</span> <span class="n">db_host</span><span class="p">,</span> <span class="n">db_port</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates a new PostgreSQL database using psycopg3.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># Connect to default &#39;postgres&#39; database</span>
+        <span class="k">with</span> <span class="n">psycopg</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+            <span class="n">dbname</span><span class="o">=</span><span class="s2">&quot;postgres&quot;</span><span class="p">,</span>
+            <span class="n">user</span><span class="o">=</span><span class="n">db_user</span><span class="p">,</span>
+            <span class="n">password</span><span class="o">=</span><span class="n">db_password</span><span class="p">,</span>
+            <span class="n">host</span><span class="o">=</span><span class="n">db_host</span><span class="p">,</span>
+            <span class="n">port</span><span class="o">=</span><span class="n">db_port</span>
+        <span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+
+            <span class="c1"># Enable autocommit for CREATE DATABASE</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">autocommit</span> <span class="o">=</span> <span class="kc">True</span>
+
+            <span class="k">with</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+                <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                    <span class="n">SQL</span><span class="p">(</span><span class="s2">&quot;CREATE DATABASE </span><span class="si">{}</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">Identifier</span><span class="p">(</span><span class="n">db_name</span><span class="p">))</span>
+                <span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Database &#39;</span><span class="si">{}</span><span class="s2">&#39; created successfully.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">db_name</span><span class="p">))</span>
+
+    <span class="k">except</span> <span class="n">OperationalError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Error &#39;</span><span class="si">{}</span><span class="s2">&#39; occurred.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">e</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="create_table">
+<a class="viewcode-back" href="../api_reference.html#load_data.create_table">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_table</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Drops and creates the &#39;applicants&#39; table in the &#39;applicant_data&#39; database using psycopg3.</span>
+<span class="sd">    Uses p_id from the last part of the URL as a BIGINT primary key.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">psycopg</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="o">**</span><span class="n">get_db_connect_kwargs</span><span class="p">())</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+                <span class="c1"># Step 1: Drop table if it exists</span>
+                <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;DROP TABLE IF EXISTS applicants;&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Dropped existing table &#39;applicants&#39; (if it existed).&quot;</span><span class="p">)</span>
+
+                <span class="c1"># Step 2: Create table</span>
+                <span class="n">create_table_query</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                CREATE TABLE applicants (</span>
+<span class="s2">                    p_id BIGINT PRIMARY KEY,</span>
+<span class="s2">                    program TEXT,</span>
+<span class="s2">                    comments TEXT,</span>
+<span class="s2">                    date_added DATE,</span>
+<span class="s2">                    url TEXT,</span>
+<span class="s2">                    status TEXT,</span>
+<span class="s2">                    term TEXT,</span>
+<span class="s2">                    us_or_international TEXT,</span>
+<span class="s2">                    gpa FLOAT,</span>
+<span class="s2">                    gre FLOAT,</span>
+<span class="s2">                    gre_v FLOAT,</span>
+<span class="s2">                    gre_aw FLOAT,</span>
+<span class="s2">                    degree TEXT,</span>
+<span class="s2">                    llm_generated_program TEXT,</span>
+<span class="s2">                    llm_generated_university TEXT</span>
+<span class="s2">                );</span>
+<span class="s2">                &quot;&quot;&quot;</span>
+                <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">create_table_query</span><span class="p">)</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Table &#39;applicants&#39; created successfully (psycopg3).&quot;</span><span class="p">)</span>
+
+    <span class="k">except</span> <span class="n">OperationalError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Error &#39;</span><span class="si">{}</span><span class="s2">&#39; occurred.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">e</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="bulk_insert_json">
+<a class="viewcode-back" href="../api_reference.html#load_data.bulk_insert_json">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">bulk_insert_json</span><span class="p">(</span><span class="n">json_file_path</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">1000</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Bulk inserts JSON Lines data into the &#39;applicants&#39; table using psycopg3.</span>
+<span class="sd">    If the table already contains data, it will be deleted first to avoid duplicates.</span>
+<span class="sd">    p_id is extracted from the URL (last number after &#39;/&#39;).</span>
+<span class="sd">    Prints the number of duplicates skipped.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">psycopg</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="o">**</span><span class="n">get_db_connect_kwargs</span><span class="p">())</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+
+                <span class="c1"># Step 1: Clear existing data</span>
+                <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;TRUNCATE TABLE applicants;&quot;</span><span class="p">)</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Existing data deleted from &#39;applicants&#39; table.&quot;</span><span class="p">)</span>
+
+                <span class="c1"># Step 2: Prepare insert query with conflict handling</span>
+                <span class="n">insert_query</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                INSERT INTO applicants (</span>
+<span class="s2">                    p_id, program, comments, date_added, url, status, term,</span>
+<span class="s2">                    us_or_international, gpa, gre, gre_v, gre_aw, degree,</span>
+<span class="s2">                    llm_generated_program, llm_generated_university</span>
+<span class="s2">                ) VALUES (</span>
+<span class="s2">                    </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span>
+<span class="s2">                )</span>
+<span class="s2">                ON CONFLICT (p_id) DO NOTHING;</span>
+<span class="s2">                &quot;&quot;&quot;</span>
+
+                <span class="n">batch</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">count_inserted</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">count_duplicates</span> <span class="o">=</span> <span class="mi">0</span>
+
+                <span class="c1"># Step 3: Read JSON Lines file and populate batches</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">json_file_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+                        <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
+                            <span class="k">continue</span>
+
+                        <span class="n">entry</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+                        <span class="c1"># Extract p_id from URL</span>
+                        <span class="n">p_id</span> <span class="o">=</span> <span class="kc">None</span>
+                        <span class="n">url</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">url</span> <span class="ow">and</span> <span class="s2">&quot;/&quot;</span> <span class="ow">in</span> <span class="n">url</span><span class="p">:</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="n">p_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">url</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                                <span class="n">p_id</span> <span class="o">=</span> <span class="kc">None</span>
+
+                        <span class="k">if</span> <span class="n">p_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="k">continue</span>  <span class="c1"># skip rows with invalid/missing URL</span>
+
+                        <span class="c1"># Convert date safely</span>
+                        <span class="n">date_val</span> <span class="o">=</span> <span class="kc">None</span>
+                        <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;date_added&quot;</span><span class="p">):</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="n">date_val</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">&quot;date_added&quot;</span><span class="p">],</span> <span class="s2">&quot;%B </span><span class="si">%d</span><span class="s2">, %Y&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
+                            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                                <span class="n">date_val</span> <span class="o">=</span> <span class="kc">None</span>
+
+                        <span class="c1"># Convert numeric fields safely</span>
+                        <span class="n">gpa</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GPA&quot;</span><span class="p">))</span> <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GPA&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+                        <span class="n">gre</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GRE Score&quot;</span><span class="p">))</span> <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GRE Score&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+                        <span class="n">gre_v</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GRE V Score&quot;</span><span class="p">))</span> <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GRE V Score&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+                        <span class="n">gre_aw</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GRE AW Score&quot;</span><span class="p">))</span> <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GRE AW Score&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+                        <span class="n">program_field</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;program&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+                        <span class="c1"># Add row to batch</span>
+                        <span class="n">batch</span><span class="o">.</span><span class="n">append</span><span class="p">((</span>
+                            <span class="n">p_id</span><span class="p">,</span>
+                            <span class="n">program_field</span><span class="p">,</span>
+                            <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;comments&quot;</span><span class="p">),</span>
+                            <span class="n">date_val</span><span class="p">,</span>
+                            <span class="n">url</span><span class="p">,</span>
+                            <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">),</span>
+                            <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;term&quot;</span><span class="p">),</span>
+                            <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;US/International&quot;</span><span class="p">),</span>
+                            <span class="n">gpa</span><span class="p">,</span>
+                            <span class="n">gre</span><span class="p">,</span>
+                            <span class="n">gre_v</span><span class="p">,</span>
+                            <span class="n">gre_aw</span><span class="p">,</span>
+                            <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Degree&quot;</span><span class="p">),</span>
+                            <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;llm-generated-program&quot;</span><span class="p">),</span>
+                            <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;llm-generated-university&quot;</span><span class="p">)</span>
+                        <span class="p">))</span>
+
+                        <span class="c1"># Insert batch if size reached</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">batch_size</span><span class="p">:</span>
+                            <span class="n">cur</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span><span class="n">insert_query</span><span class="p">,</span> <span class="n">batch</span><span class="p">)</span>
+                            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+                            <span class="c1"># Count inserted vs duplicates</span>
+                            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
+                                <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT 1 FROM applicants WHERE p_id = </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],))</span>
+                                <span class="k">if</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">():</span>
+                                    <span class="n">count_inserted</span> <span class="o">+=</span> <span class="mi">1</span>
+                                <span class="k">else</span><span class="p">:</span>
+                                    <span class="n">count_duplicates</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                            <span class="c1">#print(f&quot;{count_inserted} records inserted so far...&quot;)</span>
+                            <span class="n">batch</span> <span class="o">=</span> <span class="p">[]</span>
+
+                <span class="c1"># Insert any remaining rows</span>
+                <span class="k">if</span> <span class="n">batch</span><span class="p">:</span>
+                    <span class="n">cur</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span><span class="n">insert_query</span><span class="p">,</span> <span class="n">batch</span><span class="p">)</span>
+                    <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+                    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
+                        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT 1 FROM applicants WHERE p_id = </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],))</span>
+                        <span class="k">if</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">():</span>
+                            <span class="n">count_inserted</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">count_duplicates</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&#39;</span><span class="si">{}</span><span class="s2">&#39; records inserted in total.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">count_inserted</span><span class="p">))</span>
+
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Number of duplicates skipped: &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">count_duplicates</span><span class="p">))</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;All records inserted successfully!&quot;</span><span class="p">)</span>
+
+    <span class="k">except</span> <span class="n">OperationalError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Error &#39;</span><span class="si">{}</span><span class="s2">&#39; occurred.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">e</span><span class="p">))</span></div>
+
+<span class="n">dirname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
+<span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span> <span class="s1">&#39;module_2/llm_extend_applicant_data.json&#39;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../api_reference.html#load_data.main">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;CLI entrypoint for local schema initialization and baseline load.&quot;&quot;&quot;</span>
+    <span class="n">create_table</span><span class="p">()</span>
+    <span class="n">bulk_insert_json</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Greg Miller.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

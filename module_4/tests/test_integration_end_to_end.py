@@ -449,3 +449,36 @@ def test_post_update_db_twice_with_overlapping_data_preserves_uniqueness(
     assert total_count == 3
     assert distinct_count == 3
     assert p_ids == [3001, 3002, 3003]
+
+
+@pytest.mark.integration
+def test_pull_data_loader_error_returns_non_200_and_no_partial_writes(
+    client,
+    monkeypatch,
+    postgres_connect_kwargs,
+    reset_real_applicants_table,
+):
+    """If the pull loader errors, request should fail and DB should remain unchanged."""
+
+    def failing_update_db():
+        raise RuntimeError("simulated loader failure")
+
+    def failing_popen(*_args, **_kwargs):
+        # Match integration behavior where tests execute updater synchronously.
+        failing_update_db()
+
+    pages.db_process = None
+    pages.status_message = None
+    pages.user_message = None
+    monkeypatch.setattr(pages.subprocess, "Popen", failing_popen)
+    client.application.config["PROPAGATE_EXCEPTIONS"] = False
+
+    response = client.post("/pull-data", headers={"Accept": "application/json"})
+    assert response.status_code != 200
+
+    with psycopg.connect(**postgres_connect_kwargs) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM applicants;")
+            row_count = cur.fetchone()[0]
+
+    assert row_count == 0

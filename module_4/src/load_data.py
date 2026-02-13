@@ -1,6 +1,4 @@
-### Author: Greg Miller
-### Class: Modern Software Concepts in Python
-### File purpose: Create a PostGreSQL table called applicants and import the baseline data from module_2
+"""Create/reset applicants schema and bulk-load baseline JSON data."""
 
 import sys
 import os
@@ -203,13 +201,15 @@ def bulk_insert_json(json_file_path, batch_size=1000):
 
     except OperationalError as e:
         print("Error '{}' occurred.".format(e))
-#Function to append the DB with data from a JSON object (utilitzed in the refresh_data script)
-
-
-
-
 dirname = os.path.dirname(__file__)
 filename = os.path.join(dirname, 'module_2/llm_extend_applicant_data.json')
-# Initial functions to create the table 
-create_table()
-bulk_insert_json(filename)
+
+
+def main():
+    """CLI entrypoint for local schema initialization and baseline load."""
+    create_table()
+    bulk_insert_json(filename)
+
+
+if __name__ == "__main__":
+    main()

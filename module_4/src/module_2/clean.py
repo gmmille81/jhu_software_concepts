@@ -1,16 +1,32 @@
+"""Cleaning/parsing helpers for raw GradCafe scrape rows."""
+
 import urllib3
 from bs4 import BeautifulSoup
 import json
 import re
 import certifi
 
-#opens json file and returns dict
+
 def load_data(filename):
+    """Load raw scraped JSON data from disk."""
     with open(filename, 'r') as f:
         data = json.load(f)
     return data
 
+
 def clean_data(data):
+    """Convert raw scraped rows into normalized applicant dictionaries.
+
+    Parameters
+    ----------
+    data:
+        Raw scrape dictionary where each key maps to a list of row fields.
+
+    Returns
+    -------
+    list[dict]
+        Normalized records consumed by database insertion logic.
+    """
     master_dict = {}
     #iterate through python dict by referencing keys
     for key in data.keys():
@@ -86,4 +102,3 @@ def clean_data(data):
         for key in master_dict.keys():
             master_arr.append(master_dict[key])
     return master_arr
-

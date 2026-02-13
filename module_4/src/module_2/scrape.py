@@ -1,10 +1,29 @@
+"""Scraping utilities for GradCafe survey pages.
+
+This module fetches tabular survey pages and normalizes multi-row entries into
+a dictionary keyed by row index for downstream cleaning/parsing.
+"""
+
 import urllib3
 from bs4 import BeautifulSoup
 import json
 import re
 import certifi
-#pulls data from gradcafe and puts individual fields into python dict
+
+
 def scrape_data(record_count):
+    """Scrape GradCafe survey pages until ``record_count`` rows are collected.
+
+    Parameters
+    ----------
+    record_count:
+        Target number of records to collect.
+
+    Returns
+    -------
+    dict[int, list[str]]
+        Parsed raw rows keyed by synthetic integer id.
+    """
     #urllib3 requires pool manager - different from lecture
     http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', ca_certs=certifi.where())
     page_data = {}
@@ -47,7 +66,9 @@ def scrape_data(record_count):
                     counter+=1
             page+=1
     return page_data
-#saves inputted python dict into json file in module2 folder
+
+
 def save_data(data_arr,filename):
+    """Persist scraped raw data to a JSON file."""
     with open(filename, "w", encoding='utf-8') as f:
         json.dump(data_arr, f)

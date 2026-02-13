@@ -566,6 +566,16 @@ def test_pages_update_db_route_conflict_and_success_paths(client, monkeypatch):
         def poll(self):
             return None
 
+    # Exercise local helper methods so coverage includes these class branches.
+    _cursor = _Cursor()
+    assert _cursor.execute("SELECT 1") is None
+    assert _cursor.fetchall() == [("Q", "10%")]
+    assert _cursor.close() is None
+    _conn = _Conn()
+    assert isinstance(_conn.cursor(), _Cursor)
+    assert _conn.close() is None
+    assert _StartedProc().poll() is None
+
     monkeypatch.setattr(pages.subprocess, "Popen", lambda *_a, **_k: _StartedProc())
 
     pages.db_process = _RunningProc()
@@ -612,6 +622,15 @@ def test_pages_update_analysis_route_conflict_and_success_paths(client, monkeypa
         def poll(self):
             return None
 
+    # Exercise local helper methods so coverage includes these class branches.
+    _cursor = _Cursor()
+    assert _cursor.execute("SELECT 1") is None
+    assert _cursor.fetchall() == [("Q", "50%")]
+    assert _cursor.close() is None
+    _conn = _Conn()
+    assert isinstance(_conn.cursor(), _Cursor)
+    assert _conn.close() is None
+
     calls = {"questions": 0}
     monkeypatch.setattr(pages, "connect", lambda: _Conn())
     monkeypatch.setattr(pages, "questions", lambda _conn: calls.__setitem__("questions", 1))
@@ -636,6 +655,68 @@ def test_pages_update_analysis_route_conflict_and_success_paths(client, monkeypa
     assert success_payload["ok"] is True
     assert success_payload["busy"] is False
     assert "analysis complete" in success_payload["message"].lower()
+
+
+@pytest.mark.web
+def test_pages_non_json_redirect_branches_for_busy_and_post_success(client, monkeypatch):
+    class _RunningProc:
+        def poll(self):
+            return None
+
+    class _FakeConn:
+        pass
+
+    # Busy /pull-data without JSON accept should redirect.
+    pages.db_process = _RunningProc()
+    resp_pull_busy = client.post("/pull-data", follow_redirects=False)
+    assert resp_pull_busy.status_code == 303
+    assert resp_pull_busy.headers["Location"].endswith("/analysis")
+
+    # Busy /update_analysis without JSON accept should redirect.
+    pages.db_process = _RunningProc()
+    resp_analysis_busy = client.post("/update_analysis", follow_redirects=False)
+    assert resp_analysis_busy.status_code == 303
+    assert resp_analysis_busy.headers["Location"].endswith("/analysis")
+
+    # Successful POST /update_analysis without JSON accept should redirect.
+    pages.db_process = None
+    monkeypatch.setattr(pages, "connect", lambda: _FakeConn())
+    monkeypatch.setattr(pages, "questions", lambda _conn: None)
+    resp_analysis_ok = client.post("/update_analysis", follow_redirects=False)
+    assert resp_analysis_ok.status_code == 303
+    assert resp_analysis_ok.headers["Location"].endswith("/analysis")
+
+
+@pytest.mark.web
+def test_pages_update_analysis_get_returns_rendered_page(client, monkeypatch):
+    class _Cursor:
+        def execute(self, _q):
+            return None
+
+        def fetchall(self):
+            return [("Question", "12.3%")]
+
+        def close(self):
+            return None
+
+    class _Conn:
+        def cursor(self):
+            return _Cursor()
+
+        def close(self):
+            return None
+
+    pages.db_process = None
+    pages.status_message = None
+    pages.user_message = None
+    monkeypatch.setattr(pages, "connect", lambda: _Conn())
+
+    response = client.get("/update_analysis")
+    html = response.data.decode("utf-8")
+
+    assert response.status_code == 200
+    assert "Question" in html
+    assert "12.30%" in html
 
 
 @pytest.mark.integration

@@ -1,0 +1,292 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pages &mdash; Modern Software Concepts in Python Module 4 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Modern Software Concepts in Python Module 4
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview_setup.html">Overview &amp; Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../testing_guide.html">Testing Guide</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Modern Software Concepts in Python Module 4</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">pages</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pages</h1><div class="highlight"><pre>
+<span></span><span class="c1"># src/pages.py</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">flask</span><span class="w"> </span><span class="kn">import</span> <span class="n">Blueprint</span><span class="p">,</span> <span class="n">jsonify</span><span class="p">,</span> <span class="n">redirect</span><span class="p">,</span> <span class="n">render_template</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">url_for</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">query_data</span><span class="w"> </span><span class="kn">import</span> <span class="n">connect</span><span class="p">,</span> <span class="n">questions</span>
+
+<span class="c1"># Blueprint definition</span>
+<span class="n">bp</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="s2">&quot;main&quot;</span><span class="p">,</span> <span class="vm">__name__</span><span class="p">)</span>
+
+<span class="c1"># -------------------- Global state --------------------</span>
+<span class="n">db_process</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">status_message</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">user_message</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="c1"># -------------------- Helper functions --------------------</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_wants_json_response</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return True when the client explicitly prefers JSON over HTML.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">accept_mimetypes</span><span class="o">.</span><span class="n">best</span> <span class="o">==</span> <span class="s2">&quot;application/json&quot;</span>
+
+
+<div class="viewcode-block" id="db_is_running">
+<a class="viewcode-back" href="../api_reference.html#pages.db_is_running">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">db_is_running</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">db_process</span>
+    <span class="k">return</span> <span class="n">db_process</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">db_process</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="check_db_completion">
+<a class="viewcode-back" href="../api_reference.html#pages.check_db_completion">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_db_completion</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">db_process</span><span class="p">,</span> <span class="n">status_message</span>
+    <span class="k">if</span> <span class="n">db_process</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="n">retcode</span> <span class="o">=</span> <span class="n">db_process</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">retcode</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">status_message</span> <span class="o">=</span> <span class="s2">&quot;Database update in progress...&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">status_message</span> <span class="o">=</span> <span class="s2">&quot;Last requested database update complete.&quot;</span>
+        <span class="n">db_process</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_format_percentages_in_text</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Normalize any percentage values in a string to two decimal places.</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">    - &quot;52.3%&quot; -&gt; &quot;52.30%&quot;</span>
+<span class="sd">    - &quot;10%&quot; -&gt; &quot;10.00%&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_repl</span><span class="p">(</span><span class="n">match</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">%&quot;</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;([-+]?\d+(?:\.\d+)?)\s*%&quot;</span><span class="p">,</span> <span class="n">_repl</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_render_analysis_page</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Render the analysis page content shared by multiple routes.</span>
+
+<span class="sd">    Centralizing this logic lets button routes return HTTP 200 directly while</span>
+<span class="sd">    preserving the same page content and message behavior as /analysis.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">user_message</span>
+
+    <span class="c1"># Keep state current before loading data for the page view.</span>
+    <span class="n">check_db_completion</span><span class="p">()</span>
+
+    <span class="c1"># Fetch analysis results for display.</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">connect</span><span class="p">()</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT * FROM answers_table&quot;</span><span class="p">)</span>
+    <span class="n">query_answers</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="n">formatted_answers</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">query_answers</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">formatted_answers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="n">row_as_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+        <span class="n">row_as_list</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">_format_percentages_in_text</span><span class="p">(</span><span class="n">row_as_list</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">formatted_answers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">row_as_list</span><span class="p">))</span>
+
+    <span class="n">msg_to_display</span> <span class="o">=</span> <span class="n">user_message</span> <span class="ow">or</span> <span class="n">status_message</span>
+    <span class="n">user_message</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span>
+        <span class="s2">&quot;index.html&quot;</span><span class="p">,</span>
+        <span class="n">applicant_data</span><span class="o">=</span><span class="n">formatted_answers</span><span class="p">,</span>
+        <span class="n">message</span><span class="o">=</span><span class="n">msg_to_display</span><span class="p">,</span>
+        <span class="n">db_running</span><span class="o">=</span><span class="n">db_is_running</span><span class="p">()</span>
+    <span class="p">)</span>
+
+<span class="c1"># -------------------- Routes --------------------</span>
+<div class="viewcode-block" id="index">
+<a class="viewcode-back" href="../api_reference.html#pages.index">[docs]</a>
+<span class="nd">@bp</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/analysis&quot;</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="s2">&quot;index&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">index</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Main page route</span>
+<span class="sd">    Displays analysis results and status/messages</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Route remains unchanged functionally; it now uses the shared renderer.</span>
+    <span class="k">return</span> <span class="n">_render_analysis_page</span><span class="p">()</span></div>
+
+
+<span class="c1"># -------------------- Update DB route --------------------</span>
+<div class="viewcode-block" id="update_db_route">
+<a class="viewcode-back" href="../api_reference.html#pages.update_db_route">[docs]</a>
+<span class="nd">@bp</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/pull-data&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;POST&quot;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">update_db_route</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Triggered by &#39;Pull Data&#39; button</span>
+<span class="sd">    POST: start the DB update if not running</span>
+<span class="sd">    Returns JSON:</span>
+<span class="sd">    - 409 with busy=true if DB update is already running</span>
+<span class="sd">    - 200 with ok=true when DB update is started</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">db_process</span><span class="p">,</span> <span class="n">status_message</span><span class="p">,</span> <span class="n">user_message</span>
+
+    <span class="n">check_db_completion</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">db_is_running</span><span class="p">():</span>
+        <span class="n">user_message</span> <span class="o">=</span> <span class="s2">&quot;Database update already running.&quot;</span>
+        <span class="k">if</span> <span class="n">_wants_json_response</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;ok&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;busy&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="n">user_message</span><span class="p">}),</span> <span class="mi">409</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s2">&quot;main.index&quot;</span><span class="p">),</span> <span class="n">code</span><span class="o">=</span><span class="mi">303</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
+        <span class="c1"># Start background DB update</span>
+        <span class="n">db_process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s2">&quot;update_db.py&quot;</span><span class="p">],</span>
+            <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">STDOUT</span><span class="p">,</span>
+            <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span>
+            <span class="n">close_fds</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">start_new_session</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="n">status_message</span> <span class="o">=</span> <span class="s2">&quot;Database update started.&quot;</span>
+
+    <span class="k">if</span> <span class="n">_wants_json_response</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;ok&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;busy&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="n">status_message</span><span class="p">}),</span> <span class="mi">200</span>
+    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s2">&quot;main.index&quot;</span><span class="p">),</span> <span class="n">code</span><span class="o">=</span><span class="mi">303</span><span class="p">)</span></div>
+
+
+<span class="c1"># -------------------- Update Analysis route --------------------</span>
+<div class="viewcode-block" id="update_analysis_route">
+<a class="viewcode-back" href="../api_reference.html#pages.update_analysis_route">[docs]</a>
+<span class="nd">@bp</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/update_analysis&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;GET&quot;</span><span class="p">,</span> <span class="s2">&quot;POST&quot;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">update_analysis_route</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Triggered by &#39;Update Analysis&#39; button</span>
+<span class="sd">    POST: run analysis if DB update not running</span>
+<span class="sd">    Returns JSON:</span>
+<span class="sd">    - 409 with busy=true if DB update is running</span>
+<span class="sd">    - 200 with ok=true when analysis is updated</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">status_message</span><span class="p">,</span> <span class="n">user_message</span>
+
+    <span class="n">check_db_completion</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">db_is_running</span><span class="p">():</span>
+        <span class="n">user_message</span> <span class="o">=</span> <span class="s2">&quot;Cannot run analysis while database update is running.&quot;</span>
+        <span class="k">if</span> <span class="n">_wants_json_response</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;ok&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;busy&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="n">user_message</span><span class="p">}),</span> <span class="mi">409</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s2">&quot;main.index&quot;</span><span class="p">),</span> <span class="n">code</span><span class="o">=</span><span class="mi">303</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
+        <span class="c1"># Run analysis queries</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">connect</span><span class="p">()</span>
+        <span class="n">questions</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span>
+        <span class="n">status_message</span> <span class="o">=</span> <span class="s2">&quot;Analysis complete.&quot;</span>
+        <span class="k">if</span> <span class="n">_wants_json_response</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;ok&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;busy&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="n">status_message</span><span class="p">}),</span> <span class="mi">200</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s2">&quot;main.index&quot;</span><span class="p">),</span> <span class="n">code</span><span class="o">=</span><span class="mi">303</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_render_analysis_page</span><span class="p">(),</span> <span class="mi">200</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Greg Miller.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
