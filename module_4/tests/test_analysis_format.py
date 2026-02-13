@@ -92,12 +92,16 @@ def test_update_analysis_rendered_output_includes_answer_labels(
     monkeypatch.setattr(pages, "connect", fake_connect)
     monkeypatch.setattr(pages, "questions", fake_questions)
 
-    # Trigger the same endpoint used by the "Update Analysis" UI button.
-    response = client.post("/update_analysis")
-    html = response.data.decode("utf-8")
-
-    # Route should successfully render the analysis page.
+    # Trigger analysis update, then load the rendered analysis page.
+    response = client.post("/update_analysis", headers={"Accept": "application/json"})
+    payload = response.get_json()
     assert response.status_code == 200
+    assert payload["ok"] is True
+    assert payload["busy"] is False
+
+    analysis_response = client.get("/analysis")
+    html = analysis_response.data.decode("utf-8")
+    assert analysis_response.status_code == 200
 
     # Template renders each row with `<strong>Answer: </strong>...`.
     # We expect at least one `Answer:` label per row we supplied.
@@ -135,12 +139,16 @@ def test_update_analysis_formats_percentages_to_two_decimals(
     monkeypatch.setattr(pages, "connect", fake_connect)
     monkeypatch.setattr(pages, "questions", fake_questions)
 
-    # Hit the same endpoint invoked by the "Update Analysis" form submit.
-    response = client.post("/update_analysis")
-    html = response.data.decode("utf-8")
-
-    # Request should succeed and return the rendered page.
+    # Trigger analysis update, then load the rendered analysis page.
+    response = client.post("/update_analysis", headers={"Accept": "application/json"})
+    payload = response.get_json()
     assert response.status_code == 200
+    assert payload["ok"] is True
+    assert payload["busy"] is False
+
+    analysis_response = client.get("/analysis")
+    html = analysis_response.data.decode("utf-8")
+    assert analysis_response.status_code == 200
 
     # Confirm rendered content contains normalized value with two decimals.
     # Using regex keeps the assertion focused on formatting semantics.

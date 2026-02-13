@@ -25,9 +25,11 @@ def test_page_load(client, seeded_answers_table):
 
     assert "Pull Data" in buttons
     assert "Update Analysis" in buttons
+    assert soup.select_one('button[data-testid="pull-data-btn"]') is not None
+    assert soup.select_one('button[data-testid="update-analysis-btn"]') is not None
 # @pytest.mark.parametrize('page_name,expected_result',[
 #     ('/',200),
-#     ('/update-db',200),
+#     ('/pull-data',200),
 #     ('/update_analysis',200)
 # ])
 

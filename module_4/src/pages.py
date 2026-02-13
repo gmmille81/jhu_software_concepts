@@ -1,5 +1,5 @@
 # src/pages.py
-from flask import Blueprint, render_template, request
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 import subprocess
 import sys
 import re
@@ -14,6 +14,13 @@ status_message = None
 user_message = None
 
 # -------------------- Helper functions --------------------
+def _wants_json_response():
+    """
+    Return True when the client explicitly prefers JSON over HTML.
+    """
+    return request.accept_mimetypes.best == "application/json"
+
+
 def db_is_running():
     global db_process
     return db_process is not None and db_process.poll() is None
@@ -100,22 +107,24 @@ def index():
     return _render_analysis_page()
 
 # -------------------- Update DB route --------------------
-@bp.route("/update-db", methods=["POST"])
+@bp.route("/pull-data", methods=["POST"])
 def update_db_route():
     """
     Triggered by 'Pull Data' button
     POST: start the DB update if not running
-    Returns: 409 if DB update is already running, else analysis page (200)
+    Returns JSON:
+    - 409 with busy=true if DB update is already running
+    - 200 with ok=true when DB update is started
     """
     global db_process, status_message, user_message
 
     check_db_completion()
 
     if db_is_running():
-        # Return the analysis page (not plain text) so users keep the same UI
-        # and auto-refresh behavior while still signaling conflict via 409.
         user_message = "Database update already running."
-        return _render_analysis_page(), 409
+        if _wants_json_response():
+            return jsonify({"ok": False, "busy": True, "message": user_message}), 409
+        return redirect(url_for("main.index"), code=303)
 
     if request.method == "POST":
         # Start background DB update
@@ -127,10 +136,10 @@ def update_db_route():
             start_new_session=True
         )
         status_message = "Database update started."
-    
-    # Return the analysis page directly so this POST route responds with HTTP 200
-    # while preserving the original page output and status message behavior.
-    return _render_analysis_page(), 200
+
+    if _wants_json_response():
+        return jsonify({"ok": True, "busy": False, "message": status_message}), 200
+    return redirect(url_for("main.index"), code=303)
 
 # -------------------- Update Analysis route --------------------
 @bp.route("/update_analysis", methods=["GET", "POST"])
@@ -138,7 +147,9 @@ def update_analysis_route():
     """
     Triggered by 'Update Analysis' button
     POST: run analysis if DB update not running
-    GET/POST: 409 if DB update is running, else analysis page (200)
+    Returns JSON:
+    - 409 with busy=true if DB update is running
+    - 200 with ok=true when analysis is updated
     """
     global status_message, user_message
 
@@ -146,16 +157,17 @@ def update_analysis_route():
 
     if db_is_running():
         user_message = "Cannot run analysis while database update is running."
-        # Return the analysis page so the user stays on the normal UI while
-        # still signaling conflict with HTTP 409.
-        return _render_analysis_page(), 409
+        if _wants_json_response():
+            return jsonify({"ok": False, "busy": True, "message": user_message}), 409
+        return redirect(url_for("main.index"), code=303)
 
     if request.method == "POST":
         # Run analysis queries
         conn = connect()
         questions(conn)
         status_message = "Analysis complete."
+        if _wants_json_response():
+            return jsonify({"ok": True, "busy": False, "message": status_message}), 200
+        return redirect(url_for("main.index"), code=303)
 
-    # Return the analysis page directly so this POST route responds with HTTP 200
-    # while preserving the original page output and status message behavior.
     return _render_analysis_page(), 200

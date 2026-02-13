@@ -1,7 +1,7 @@
 """Button route tests for the Flask analysis page.
 
 This module validates behavior behind the ``Pull Data`` button endpoint
-(``POST /update-db``). The endpoint starts a background subprocess, so these
+(``POST /pull-data``). The endpoint starts a background subprocess, so these
 tests use monkeypatch-based stubs to keep execution deterministic and local to
 the test process.
 """
@@ -36,7 +36,7 @@ class _DummyProcess:
 
 @pytest.mark.buttons
 def test_update_db_post_returns_200(client, monkeypatch):
-    """Verify ``POST /update-db`` ultimately renders successfully.
+    """Verify ``POST /pull-data`` ultimately renders successfully.
 
     The route starts a subprocess and now renders the analysis page directly.
     This test stubs the shared page renderer to avoid external database work,
@@ -48,9 +48,6 @@ def test_update_db_post_returns_200(client, monkeypatch):
     :type monkeypatch: _pytest.monkeypatch.MonkeyPatch
     """
 
-    # Route now renders analysis directly; stub shared renderer to avoid DB I/O.
-    monkeypatch.setattr(pages, "_render_analysis_page", lambda: "ok")
-
     pages.db_process = None
     popen_calls = []
 
@@ -60,9 +57,12 @@ def test_update_db_post_returns_200(client, monkeypatch):
 
     monkeypatch.setattr(pages.subprocess, "Popen", fake_popen)
 
-    response = client.post("/update-db")
+    response = client.post("/pull-data", headers={"Accept": "application/json"})
+    payload = response.get_json()
 
     assert response.status_code == 200
+    assert payload["ok"] is True
+    assert payload["busy"] is False
     assert len(popen_calls) == 1
     assert "update_db.py" in popen_calls[0][0][0]
 
@@ -96,11 +96,13 @@ def test_update_db_post_runs_refresh_data_update_db(client, monkeypatch):
 
     monkeypatch.setattr(refresh_data, "update_db", fake_update_db)
     monkeypatch.setattr(pages.subprocess, "Popen", fake_popen)
-    monkeypatch.setattr(pages, "_render_analysis_page", lambda: "ok")
 
-    response = client.post("/update-db")
+    response = client.post("/pull-data", headers={"Accept": "application/json"})
+    payload = response.get_json()
 
     assert response.status_code == 200
+    assert payload["ok"] is True
+    assert payload["busy"] is False
     assert check_function_called["called"] is True
 
 
@@ -131,11 +133,12 @@ def test_update_analysis_post_returns_200_when_not_busy(client, monkeypatch):
 
     monkeypatch.setattr(pages, "connect", fake_connect)
     monkeypatch.setattr(pages, "questions", fake_questions)
-    monkeypatch.setattr(pages, "_render_analysis_page", lambda: "ok")
-
-    response = client.post("/update_analysis")
+    response = client.post("/update_analysis", headers={"Accept": "application/json"})
+    payload = response.get_json()
 
     assert response.status_code == 200
+    assert payload["ok"] is True
+    assert payload["busy"] is False
     assert check_analysis_called["called"] is True
 
 
@@ -163,17 +166,18 @@ def test_update_analysis_post_returns_409_when_busy_no_update(client, monkeypatc
     check_analysis_called["called"] = False
 
     monkeypatch.setattr(pages, "questions", fake_questions)
-    monkeypatch.setattr(pages, "_render_analysis_page", lambda: "busy")
-
-    response = client.post("/update_analysis")
+    response = client.post("/update_analysis", headers={"Accept": "application/json"})
+    payload = response.get_json()
 
     assert response.status_code == 409
+    assert payload["ok"] is False
+    assert payload["busy"] is True
     assert check_analysis_called["called"] is False
 
 
 @pytest.mark.buttons
 def test_update_db_post_returns_409_when_busy(client, monkeypatch):
-    """Verify busy-state ``POST /update-db`` returns ``409``.
+    """Verify busy-state ``POST /pull-data`` returns ``409``.
 
     When an update process is already running, the route must not start another
     subprocess and should respond with conflict.
@@ -196,9 +200,21 @@ def test_update_db_post_returns_409_when_busy(client, monkeypatch):
     popen_called["called"] = False
 
     monkeypatch.setattr(pages.subprocess, "Popen", fake_popen)
-    monkeypatch.setattr(pages, "_render_analysis_page", lambda: "busy")
-
-    response = client.post("/update-db")
+    response = client.post("/pull-data", headers={"Accept": "application/json"})
+    payload = response.get_json()
 
     assert response.status_code == 409
+    assert payload["ok"] is False
+    assert payload["busy"] is True
     assert popen_called["called"] is False
+
+
+@pytest.mark.buttons
+def test_browser_form_post_pull_data_redirects_to_analysis(client, monkeypatch):
+    pages.db_process = None
+    monkeypatch.setattr(pages.subprocess, "Popen", lambda *_args, **_kwargs: _DummyProcess())
+
+    response = client.post("/pull-data", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["Location"].endswith("/analysis")

@@ -1,8 +1,8 @@
-import runpy
 import sys
 from pathlib import Path
 import json
 import secrets
+import importlib.util
 
 import pytest
 from psycopg import OperationalError
@@ -16,6 +16,8 @@ import query_data
 import refresh_data
 import pages
 import update_data
+import app as app_module
+import update_db as update_db_module
 import db_config
 from module_2 import clean as clean_mod
 from module_2 import scrape as scrape_mod
@@ -24,18 +26,25 @@ import conftest as test_conftest
 TESTS_DIR = Path(__file__).resolve().parent
 
 
+def _load_module_from_path(module_path, module_name):
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def _exec_file_as_main(module_path):
+    """Execute a Python file with module name set to '__main__'."""
+    return _load_module_from_path(module_path, "__main__")
+
+
 @pytest.fixture(autouse=True)
 def fake_db_connect_kwargs(monkeypatch):
     # Keep unit tests independent from machine/CI DB env while avoiding
     # hard-coded credential literals.
     token = secrets.token_hex(8)
-    kwargs = {
-        "dbname": f"db_{token}",
-        "user": f"user_{token}",
-        "password": secrets.token_hex(16),
-        "host": "localhost",
-        "port": 5432,
-    }
+    kwargs = {"conninfo": f"postgresql://user_{token}:{secrets.token_hex(16)}@localhost:5432/db_{token}"}
     monkeypatch.setattr(query_data, "get_db_connect_kwargs", lambda: kwargs)
     monkeypatch.setattr(refresh_data, "get_db_connect_kwargs", lambda: kwargs)
     monkeypatch.setattr(update_data, "get_db_connect_kwargs", lambda: kwargs)
@@ -79,11 +88,12 @@ class _InsertConn:
         self.commits += 1
 
 
+@pytest.mark.integration
 def test_import_guard_inserts_src_dir_when_missing(monkeypatch):
     # Exercise this module's own import-guard insertion branch.
     src_dir_str = str(SRC_DIR)
     monkeypatch.setattr(sys, "path", [p for p in sys.path if p != src_dir_str])
-    runpy.run_path(__file__, run_name="cov_self_reexec")
+    _load_module_from_path(__file__, "cov_self_reexec")
     assert src_dir_str in sys.path
 
 
@@ -204,8 +214,8 @@ def test_update_db_script_main_invokes_refresh_update_db(monkeypatch):
         called["value"] = True
         return 0
 
-    monkeypatch.setattr(refresh_data, "update_db", fake_update_db)
-    runpy.run_path(str(SRC_DIR / "update_db.py"), run_name="__main__")
+    monkeypatch.setattr(update_db_module, "update_db", fake_update_db)
+    update_db_module.main()
 
     assert called["value"] is True
 
@@ -218,12 +228,26 @@ def test_app_script_main_invokes_flask_run(monkeypatch):
         run_kwargs.update(kwargs)
 
     monkeypatch.setattr("flask.Flask.run", fake_run)
-    runpy.run_path(str(SRC_DIR / "app.py"), run_name="__main__")
+    app_module.main()
 
     assert run_kwargs["host"] == "127.0.0.1"
     assert run_kwargs["port"] == 8080
     assert run_kwargs["debug"] is True
     assert run_kwargs["use_reloader"] is False
+
+
+@pytest.mark.web
+def test_app_dunder_main_guard_executes_main(monkeypatch):
+    run_kwargs = {}
+
+    def fake_run(self, **kwargs):
+        run_kwargs.update(kwargs)
+
+    monkeypatch.setattr("flask.Flask.run", fake_run)
+    _exec_file_as_main(str(SRC_DIR / "app.py"))
+
+    assert run_kwargs["host"] == "127.0.0.1"
+    assert run_kwargs["port"] == 8080
 
 
 @pytest.mark.integration
@@ -456,6 +480,7 @@ def test_pages_percent_formatter_non_string_and_valueerror_path(monkeypatch):
     assert pages._format_percentages_in_text("10%") == "10.00%"
 
 
+@pytest.mark.integration
 def test_insert_cursor_fetchone_empty_returns_none():
     cur = _InsertCursor([])
     assert cur.fetchone() is None
@@ -541,22 +566,27 @@ def test_pages_update_db_route_conflict_and_success_paths(client, monkeypatch):
         def poll(self):
             return None
 
-    monkeypatch.setattr(pages, "connect", lambda: _Conn())
     monkeypatch.setattr(pages.subprocess, "Popen", lambda *_a, **_k: _StartedProc())
 
     pages.db_process = _RunningProc()
     pages.status_message = None
     pages.user_message = None
-    conflict_resp = client.post("/update-db")
+    conflict_resp = client.post("/pull-data", headers={"Accept": "application/json"})
+    conflict_payload = conflict_resp.get_json()
     assert conflict_resp.status_code == 409
-    assert "Database update already running." in conflict_resp.data.decode("utf-8")
+    assert conflict_payload["ok"] is False
+    assert conflict_payload["busy"] is True
+    assert "already running" in conflict_payload["message"]
 
     pages.db_process = None
     pages.status_message = None
     pages.user_message = None
-    success_resp = client.post("/update-db")
+    success_resp = client.post("/pull-data", headers={"Accept": "application/json"})
+    success_payload = success_resp.get_json()
     assert success_resp.status_code == 200
-    assert "Database update in progress..." in success_resp.data.decode("utf-8")
+    assert success_payload["ok"] is True
+    assert success_payload["busy"] is False
+    assert "started" in success_payload["message"].lower()
 
 
 @pytest.mark.web
@@ -589,17 +619,23 @@ def test_pages_update_analysis_route_conflict_and_success_paths(client, monkeypa
     pages.db_process = _RunningProc()
     pages.status_message = None
     pages.user_message = None
-    conflict_resp = client.post("/update_analysis")
+    conflict_resp = client.post("/update_analysis", headers={"Accept": "application/json"})
+    conflict_payload = conflict_resp.get_json()
     assert conflict_resp.status_code == 409
-    assert "Cannot run analysis while database update is running." in conflict_resp.data.decode("utf-8")
+    assert conflict_payload["ok"] is False
+    assert conflict_payload["busy"] is True
+    assert "cannot run analysis" in conflict_payload["message"].lower()
 
     pages.db_process = None
     pages.status_message = None
     pages.user_message = None
-    success_resp = client.post("/update_analysis")
+    success_resp = client.post("/update_analysis", headers={"Accept": "application/json"})
+    success_payload = success_resp.get_json()
     assert success_resp.status_code == 200
     assert calls["questions"] == 1
-    assert "Analysis complete." in success_resp.data.decode("utf-8")
+    assert success_payload["ok"] is True
+    assert success_payload["busy"] is False
+    assert "analysis complete" in success_payload["message"].lower()
 
 
 @pytest.mark.integration
@@ -630,14 +666,7 @@ def test_query_data_main_executes_connect_and_questions(monkeypatch):
 
 @pytest.mark.integration
 def test_query_data_script_main_path_runs_with_stubbed_db(monkeypatch):
-    for key, value in {
-        "PGDATABASE": "tmp_db",
-        "PGUSER": "tmp_user",
-        "PGPASSWORD": "tmp_pw",
-        "PGHOST": "localhost",
-        "PGPORT": "5432",
-    }.items():
-        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://tmp_user:tmp_pw@localhost:5432/tmp_db")
 
     class _MainCursor:
         def __init__(self):
@@ -678,11 +707,64 @@ def test_query_data_script_main_path_runs_with_stubbed_db(monkeypatch):
         def commit(self):
             return None
 
-    monkeypatch.setattr("psycopg.connect", lambda **_kwargs: _MainConn())
+    monkeypatch.setattr(query_data, "connect", lambda: _MainConn())
+    query_data.main()
 
-    # Covers query_data.py main entrypoint lines:
-    # if __name__ == "__main__": conn = connect(); questions(conn)
-    runpy.run_path(str(SRC_DIR / "query_data.py"), run_name="__main__")
+
+@pytest.mark.integration
+def test_query_data_dunder_main_guard_executes_main(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://tmp_user:tmp_pw@localhost:5432/tmp_db")
+
+    class _MainCursor:
+        def __init__(self):
+            self._vals = [
+                (1,),
+                (10.0,),
+                (3.0, 320.0, 160.0, 4.0),
+                (3.1,),
+                (20.0,),
+                (3.2,),
+                (1,),
+                (1,),
+                (1,),
+                (2, 2),
+                (2, 2),
+            ]
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def execute(self, _query, _params=None):
+            return None
+
+        def fetchone(self):
+            return self._vals.pop(0)
+
+    class _MainConn:
+        def cursor(self):
+            return _MainCursor()
+
+        def commit(self):
+            return None
+
+    monkeypatch.setattr("psycopg.connect", lambda **_kwargs: _MainConn())
+    _exec_file_as_main(str(SRC_DIR / "query_data.py"))
+
+
+@pytest.mark.integration
+def test_update_db_dunder_main_guard_executes_main(monkeypatch):
+    called = {"value": False}
+
+    def fake_update_db():
+        called["value"] = True
+        return 0
+
+    monkeypatch.setattr(refresh_data, "update_db", fake_update_db)
+    _exec_file_as_main(str(SRC_DIR / "update_db.py"))
+    assert called["value"] is True
 
 
 @pytest.mark.integration
@@ -703,8 +785,7 @@ def test_real_postgres_ready_fixture_failure_branch(monkeypatch):
 
 @pytest.mark.integration
 def test_db_config_raises_when_required_env_missing(monkeypatch):
-    for name in ("PGDATABASE", "PGUSER", "PGPASSWORD", "PGHOST", "PGPORT"):
-        monkeypatch.delenv(name, raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
 
     with pytest.raises(RuntimeError, match="Missing required database environment variable"):
         db_config.get_db_connect_kwargs()
@@ -712,8 +793,7 @@ def test_db_config_raises_when_required_env_missing(monkeypatch):
 
 @pytest.mark.integration
 def test_postgres_connect_kwargs_fixture_fails_when_env_missing(monkeypatch):
-    for name in ("PGDATABASE", "PGUSER", "PGPASSWORD", "PGHOST", "PGPORT"):
-        monkeypatch.delenv(name, raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
 
     with pytest.raises(Failed):
         test_conftest.postgres_connect_kwargs.__wrapped__()
@@ -734,5 +814,5 @@ def test_test_module_import_guard_insert_path_branch(monkeypatch, module_filenam
     # import-guard insertion branch is exercised.
     src_dir_str = str(SRC_DIR)
     monkeypatch.setattr(sys, "path", [p for p in sys.path if p != src_dir_str])
-    runpy.run_path(str(TESTS_DIR / module_filename), run_name=run_name)
+    _load_module_from_path(str(TESTS_DIR / module_filename), run_name)
     assert src_dir_str in sys.path

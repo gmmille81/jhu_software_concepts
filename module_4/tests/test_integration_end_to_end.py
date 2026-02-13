@@ -34,7 +34,7 @@ def test_update_db_with_fake_scraper_returns_multiple_records(
 def test_post_update_db_succeeds_and_adds_rows(
     client, monkeypatch, fake_refresh_pipeline, assert_integration_rows_are_well_formed
 ):
-    """POST /update-db should succeed and add shared fake example rows."""
+    """POST /pull-data should succeed and add shared fake example rows."""
 
     class _DummyProcess:
         def poll(self):
@@ -52,9 +52,12 @@ def test_post_update_db_succeeds_and_adds_rows(
     monkeypatch.setattr(pages.subprocess, "Popen", fake_popen)
     monkeypatch.setattr(pages, "_render_analysis_page", lambda: "ok")
 
-    response = client.post("/update-db")
+    response = client.post("/pull-data", headers={"Accept": "application/json"})
+    payload = response.get_json()
 
     assert response.status_code == 200
+    assert payload["ok"] is True
+    assert payload["busy"] is False
     assert scrape_calls == [1, 2]
     assert inserted_payload["rows"] is not None
     assert len(inserted_payload["rows"]) == 2
@@ -115,11 +118,15 @@ def test_post_update_analysis_succeeds_and_updates_analysis_from_stubbed_db(
     monkeypatch.setattr(pages, "connect", fake_connect)
     monkeypatch.setattr(pages, "questions", fake_questions)
 
-    response = client.post("/update_analysis")
-    html = response.data.decode("utf-8")
+    response = client.post("/update_analysis", headers={"Accept": "application/json"})
+    payload = response.get_json()
+    render_response = client.get("/analysis")
+    html = render_response.data.decode("utf-8")
 
     assert response.status_code == 200
-    assert "Analysis complete." in html
+    assert payload["ok"] is True
+    assert payload["busy"] is False
+    assert render_response.status_code == 200
     assert "How many rows were updated?" in html
     assert "How many rows are accepted?" in html
     assert html.count("Answer:") >= 2
@@ -302,8 +309,11 @@ def test_end_to_end_pull_update_render_with_real_db(
                 cur.execute("TRUNCATE TABLE applicants;")
             conn.commit()
 
-        pull_response = client.post("/update-db")
+        pull_response = client.post("/pull-data", headers={"Accept": "application/json"})
+        pull_payload = pull_response.get_json()
         assert pull_response.status_code == 200
+        assert pull_payload["ok"] is True
+        assert pull_payload["busy"] is False
         assert scrape_calls == [1, expected_records]
 
         with psycopg.connect(**postgres_connect_kwargs) as conn:
@@ -312,8 +322,11 @@ def test_end_to_end_pull_update_render_with_real_db(
                 applicants_count = cur.fetchone()[0]
         assert applicants_count == expected_records
 
-        update_response = client.post("/update_analysis")
+        update_response = client.post("/update_analysis", headers={"Accept": "application/json"})
+        update_payload = update_response.get_json()
         assert update_response.status_code == 200
+        assert update_payload["ok"] is True
+        assert update_payload["busy"] is False
 
         render_response = client.get("/analysis")
         assert render_response.status_code == 200
@@ -413,11 +426,17 @@ def test_post_update_db_twice_with_overlapping_data_preserves_uniqueness(
     pages.status_message = None
     pages.user_message = None
 
-    first_pull = client.post("/update-db")
+    first_pull = client.post("/pull-data", headers={"Accept": "application/json"})
+    first_payload = first_pull.get_json()
     assert first_pull.status_code == 200
+    assert first_payload["ok"] is True
+    assert first_payload["busy"] is False
 
-    second_pull = client.post("/update-db")
+    second_pull = client.post("/pull-data", headers={"Accept": "application/json"})
+    second_payload = second_pull.get_json()
     assert second_pull.status_code == 200
+    assert second_payload["ok"] is True
+    assert second_payload["busy"] is False
 
     with psycopg.connect(**postgres_connect_kwargs) as conn:
         with conn.cursor() as cur:

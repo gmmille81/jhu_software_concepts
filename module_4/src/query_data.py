@@ -269,6 +269,10 @@ def questions(connection):
 
 
 # Allow this file to be executed directly for testing purposes
-if __name__ == "__main__":
+def main():
     conn = connect()
     questions(conn)
+
+
+if __name__ == "__main__":
+    main()

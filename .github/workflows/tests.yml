@@ -20,6 +20,7 @@ jobs:
       PGDATABASE: ${{ vars.PGDATABASE }}
       PGUSER: ${{ vars.PGUSER }}
       PGPASSWORD: ${{ secrets.PGPASSWORD }}
+      DATABASE_URL: postgresql://${{ vars.PGUSER }}:${{ secrets.PGPASSWORD }}@${{ vars.PGHOST }}:${{ vars.PGPORT }}/${{ vars.PGDATABASE }}
 
     steps:
       - name: Checkout
@@ -43,6 +44,7 @@ jobs:
           test -n "$PGDATABASE"
           test -n "$PGUSER"
           test -n "$PGPASSWORD"
+          test -n "$DATABASE_URL"
 
       - name: Install and configure PostgreSQL (no Docker)
         run: |

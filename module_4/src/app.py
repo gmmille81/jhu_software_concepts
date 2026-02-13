@@ -14,6 +14,10 @@ def create_app():
     return app
 
 
-if __name__ == "__main__":
+def main():
     app = create_app()
     app.run(host="127.0.0.1", port=8080, debug=True, use_reloader=False)
+
+
+if __name__ == "__main__":
+    main()
