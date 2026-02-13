@@ -2,6 +2,7 @@
 from flask import Blueprint, render_template, request
 import subprocess
 import sys
+import re
 from query_data import connect, questions
 
 # Blueprint definition
@@ -29,6 +30,26 @@ def check_db_completion():
         db_process = None
 
 
+def _format_percentages_in_text(value):
+    """
+    Normalize any percentage values in a string to two decimal places.
+
+    Examples:
+    - "52.3%" -> "52.30%"
+    - "10%" -> "10.00%"
+    """
+    if not isinstance(value, str):
+        return value
+
+    def _repl(match):
+        try:
+            return f"{float(match.group(1)):.2f}%"
+        except ValueError:
+            return match.group(0)
+
+    return re.sub(r"([-+]?\d+(?:\.\d+)?)\s*%", _repl, value)
+
+
 def _render_analysis_page():
     """
     Render the analysis page content shared by multiple routes.
@@ -49,12 +70,21 @@ def _render_analysis_page():
     cur.close()
     conn.close()
 
+    formatted_answers = []
+    for row in query_answers:
+        if len(row) < 2:
+            formatted_answers.append(row)
+            continue
+        row_as_list = list(row)
+        row_as_list[1] = _format_percentages_in_text(row_as_list[1])
+        formatted_answers.append(tuple(row_as_list))
+
     msg_to_display = user_message or status_message
     user_message = None
 
     return render_template(
         "index.html",
-        applicant_data=query_answers,
+        applicant_data=formatted_answers,
         message=msg_to_display,
         db_running=db_is_running()
     )
