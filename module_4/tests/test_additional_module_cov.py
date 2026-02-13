@@ -18,6 +18,7 @@ import query_data
 import refresh_data
 import pages
 import update_data
+import load_data
 import app as app_module
 import update_db as update_db_module
 import db_config
@@ -76,6 +77,58 @@ class _InsertConn:
     def __init__(self, fetchone_values):
         self._cursor = _InsertCursor(fetchone_values)
         self.commits = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def cursor(self):
+        return self._cursor
+
+    def commit(self):
+        self.commits += 1
+
+
+class _LoadDataCursor:
+    """Cursor double that records SQL calls and supports batched insert checks."""
+
+    def __init__(self, select_results=None):
+        self.select_results = list(select_results or [])
+        self.executed = []
+        self.executemany_calls = []
+        self._last_query = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def execute(self, query, params=None):
+        query_text = str(query)
+        self._last_query = query_text
+        self.executed.append((query_text, params))
+
+    def executemany(self, query, params_list):
+        self.executemany_calls.append((str(query), list(params_list)))
+
+    def fetchone(self):
+        if "SELECT 1 FROM applicants" in (self._last_query or ""):
+            if self.select_results:
+                return self.select_results.pop(0)
+            return None
+        return None
+
+
+class _LoadDataConn:
+    """Connection double for load_data functions."""
+
+    def __init__(self, cursor):
+        self._cursor = cursor
+        self.commits = 0
+        self.autocommit = False
 
     def __enter__(self):
         return self
@@ -220,6 +273,219 @@ def test_update_db_script_main_invokes_refresh_update_db(monkeypatch):
     update_db_module.main()
 
     assert called["value"] is True
+
+
+@pytest.mark.db
+def test_load_data_create_database_success_and_operational_error(monkeypatch, capsys):
+    cursor = _LoadDataCursor()
+    conn = _LoadDataConn(cursor)
+    monkeypatch.setattr(load_data.psycopg, "connect", lambda **_kwargs: conn)
+
+    load_data.create_database("applicant_data", "postgres", "pw", "127.0.0.1", "5432")
+
+    assert conn.autocommit is True
+    assert any("CREATE DATABASE" in q for q, _ in cursor.executed)
+    assert "created successfully" in capsys.readouterr().out
+
+    def boom(**_kwargs):
+        raise OperationalError("create db failed")
+
+    monkeypatch.setattr(load_data.psycopg, "connect", boom)
+    load_data.create_database("applicant_data", "postgres", "pw", "127.0.0.1", "5432")
+    assert "create db failed" in capsys.readouterr().out
+
+
+@pytest.mark.db
+def test_load_data_create_table_success_and_operational_error(monkeypatch, capsys):
+    cursor = _LoadDataCursor()
+    conn = _LoadDataConn(cursor)
+    monkeypatch.setattr(load_data, "get_db_connect_kwargs", lambda: {"conninfo": "postgresql://stub"})
+    monkeypatch.setattr(load_data.psycopg, "connect", lambda **_kwargs: conn)
+
+    load_data.create_table()
+
+    assert conn.commits == 1
+    assert any("DROP TABLE IF EXISTS applicants" in q for q, _ in cursor.executed)
+    assert any("CREATE TABLE applicants" in q for q, _ in cursor.executed)
+
+    def boom(**_kwargs):
+        raise OperationalError("create table failed")
+
+    monkeypatch.setattr(load_data.psycopg, "connect", boom)
+    load_data.create_table()
+    assert "create table failed" in capsys.readouterr().out
+
+
+@pytest.mark.db
+def test_load_data_bulk_insert_json_covers_batches_and_remainder(tmp_path, monkeypatch, capsys):
+    jsonl_path = tmp_path / "seed.jsonl"
+    jsonl_path.write_text(
+        "\n".join(
+            [
+                "",
+                json.dumps(
+                    {
+                        "url": "https://www.thegradcafe.com/result/1001",
+                        "program": "Computer Science, Johns Hopkins University",
+                        "comments": "",
+                        "date_added": "January 24, 2026",
+                        "status": "Accepted",
+                        "term": "Fall 2026",
+                        "US/International": "American",
+                        "GPA": "3.90",
+                        "GRE Score": "329",
+                        "GRE V Score": "162",
+                        "GRE AW Score": "4.5",
+                        "Degree": "Masters",
+                        "llm-generated-program": "Computer Science",
+                        "llm-generated-university": "Johns Hopkins University",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "url": "https://www.thegradcafe.com/result/not-a-number",
+                        "date_added": "January 25, 2026",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "url": "https://www.thegradcafe.com/result/1002",
+                        "program": "Data Science, University of Michigan",
+                        "comments": "",
+                        "date_added": "not-a-date",
+                        "status": "Rejected",
+                        "term": "Fall 2026",
+                        "US/International": "International",
+                        "GPA": "3.70",
+                        "GRE Score": "325",
+                        "GRE V Score": "160",
+                        "GRE AW Score": "4.0",
+                        "Degree": "PhD",
+                        "llm-generated-program": "",
+                        "llm-generated-university": "",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "url": "https://www.thegradcafe.com/result/1003",
+                        "program": "Statistics, Stanford University",
+                        "comments": "",
+                        "date_added": "January 26, 2026",
+                        "status": "Accepted",
+                        "term": "Fall 2026",
+                        "US/International": "American",
+                        "GPA": "",
+                        "GRE Score": "",
+                        "GRE V Score": "",
+                        "GRE AW Score": "",
+                        "Degree": "Masters",
+                        "llm-generated-program": "Statistics",
+                        "llm-generated-university": "Stanford University",
+                    }
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    cursor = _LoadDataCursor(select_results=[(1,), None, None])
+    conn = _LoadDataConn(cursor)
+    monkeypatch.setattr(load_data, "get_db_connect_kwargs", lambda: {"conninfo": "postgresql://stub"})
+    monkeypatch.setattr(load_data.psycopg, "connect", lambda **_kwargs: conn)
+
+    load_data.bulk_insert_json(str(jsonl_path), batch_size=2)
+
+    assert conn.commits == 3
+    assert any("TRUNCATE TABLE applicants" in q for q, _ in cursor.executed)
+    assert len(cursor.executemany_calls) == 2
+    assert len(cursor.executemany_calls[0][1]) == 2
+    assert len(cursor.executemany_calls[1][1]) == 1
+    first_row = cursor.executemany_calls[0][1][0]
+    assert first_row[0] == 1001
+    assert str(first_row[3]) == "2026-01-24"
+    second_valid_row = cursor.executemany_calls[0][1][1]
+    assert second_valid_row[0] == 1002
+    assert second_valid_row[3] is None
+    remainder_row = cursor.executemany_calls[1][1][0]
+    assert remainder_row[0] == 1003
+    assert remainder_row[8] is None
+    out = capsys.readouterr().out
+    assert "records inserted in total" in out
+    assert "duplicates skipped" in out
+
+
+@pytest.mark.db
+def test_load_data_bulk_insert_json_operational_error(monkeypatch, capsys):
+    monkeypatch.setattr(load_data, "get_db_connect_kwargs", lambda: {"conninfo": "postgresql://stub"})
+
+    def boom(**_kwargs):
+        raise OperationalError("bulk insert failed")
+
+    monkeypatch.setattr(load_data.psycopg, "connect", boom)
+    load_data.bulk_insert_json("does-not-matter.jsonl")
+    assert "bulk insert failed" in capsys.readouterr().out
+
+
+@pytest.mark.db
+def test_load_data_bulk_insert_json_remainder_inserted_branch(tmp_path, monkeypatch):
+    jsonl_path = tmp_path / "single.jsonl"
+    jsonl_path.write_text(
+        json.dumps(
+            {
+                "url": "https://www.thegradcafe.com/result/2001",
+                "date_added": "January 24, 2026",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    cursor = _LoadDataCursor(select_results=[(1,)])
+    conn = _LoadDataConn(cursor)
+    monkeypatch.setattr(load_data, "get_db_connect_kwargs", lambda: {"conninfo": "postgresql://stub"})
+    monkeypatch.setattr(load_data.psycopg, "connect", lambda **_kwargs: conn)
+
+    # batch_size larger than row count forces the "remaining rows" branch.
+    load_data.bulk_insert_json(str(jsonl_path), batch_size=2)
+    assert conn.commits == 2
+    assert len(cursor.executemany_calls) == 1
+
+
+@pytest.mark.integration
+def test_load_data_main_calls_create_and_bulk(monkeypatch):
+    calls = {"create_table": 0, "bulk_insert_json": 0, "path": None}
+
+    monkeypatch.setattr(
+        load_data,
+        "create_table",
+        lambda: calls.__setitem__("create_table", calls["create_table"] + 1),
+    )
+
+    def fake_bulk(path):
+        calls["bulk_insert_json"] += 1
+        calls["path"] = path
+
+    monkeypatch.setattr(load_data, "bulk_insert_json", fake_bulk)
+
+    load_data.main()
+
+    assert calls["create_table"] == 1
+    assert calls["bulk_insert_json"] == 1
+    assert calls["path"] == load_data.filename
+
+
+@pytest.mark.integration
+def test_load_data_dunder_main_guard_executes_main(monkeypatch):
+    monkeypatch.setattr(db_config, "get_db_connect_kwargs", lambda: {"conninfo": "postgresql://stub"})
+
+    def boom(**_kwargs):
+        raise OperationalError("expected in test")
+
+    monkeypatch.setattr("psycopg.connect", boom)
+
+    # Executes if __name__ == "__main__" block without requiring a live DB.
+    _exec_file_as_main(str(SRC_DIR / "load_data.py"))
 
 
 @pytest.mark.web
@@ -877,9 +1143,42 @@ def test_db_config_raises_when_required_env_missing(monkeypatch):
 @pytest.mark.integration
 def test_postgres_connect_kwargs_fixture_fails_when_env_missing(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("PGDATABASE", raising=False)
+    monkeypatch.delenv("PGUSER", raising=False)
+    monkeypatch.delenv("PGPASSWORD", raising=False)
+    monkeypatch.delenv("PGHOST", raising=False)
+    monkeypatch.delenv("PGPORT", raising=False)
 
     with pytest.raises(Failed):
         test_conftest.postgres_connect_kwargs.__wrapped__()
+
+
+@pytest.mark.integration
+def test_postgres_connect_kwargs_fixture_uses_pg_fallback_when_database_url_missing(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setenv("PGDATABASE", "applicant_data")
+    monkeypatch.setenv("PGUSER", "postgres")
+    monkeypatch.setenv("PGPASSWORD", "abc123")
+    monkeypatch.setenv("PGHOST", "127.0.0.1")
+    monkeypatch.setenv("PGPORT", "5432")
+
+    kwargs = test_conftest.postgres_connect_kwargs.__wrapped__()
+    assert kwargs == {
+        "dbname": "applicant_data",
+        "user": "postgres",
+        "password": "abc123",
+        "host": "127.0.0.1",
+        "port": "5432",
+    }
+
+
+@pytest.mark.db
+def test_load_data_cursor_fetchone_non_select_and_empty_select_paths():
+    cur = _LoadDataCursor(select_results=[])
+    cur.execute("UPDATE applicants SET program = %s", ("x",))
+    assert cur.fetchone() is None
+    cur.execute("SELECT 1 FROM applicants WHERE p_id = %s", (1,))
+    assert cur.fetchone() is None
 
 
 @pytest.mark.integration

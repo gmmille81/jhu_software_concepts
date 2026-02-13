@@ -47,7 +47,7 @@
 <li class="toctree-l1"><a class="reference internal" href="overview_setup.html">Overview &amp; Setup</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Architecture</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#web-layer">Web Layer</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#etl-layer">ETL Layer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#business-layer">Business Layer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#database-layer">Database Layer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#execution-flow">Execution Flow</a></li>
 </ul>
@@ -92,20 +92,20 @@
 - <code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/update_analysis</span></code> refreshes analysis answers.</p></li>
 </ul>
 </section>
-<section id="etl-layer">
-<h2>ETL Layer<a class="headerlink" href="#etl-layer" title="Link to this heading"></a></h2>
+<section id="business-layer">
+<h2>Business Layer<a class="headerlink" href="#business-layer" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">src/module_2/scrape.py</span></code>: Scrapes data from GradCafe.com.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">src/module_2/clean.py</span></code>: Transforms raw data into normalized records.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">src/refresh_data.py</span></code>: Coordinates scrape + clean + insert.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">src/update_data.py</span></code>: Batch inserts normalized records into PostgreSQL.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/module_2/clean.py</span></code>: Transforms raw scraped data into clean, normalized records.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/refresh_data.py</span></code>: Coordinates scrape + clean to get consolidated new data in dict format.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/update_data.py</span></code>: Batch inserts normalized records into PostgreSQL table.</p></li>
 </ul>
 </section>
 <section id="database-layer">
 <h2>Database Layer<a class="headerlink" href="#database-layer" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">src/db_config.py</span></code>: Centralized DB connection configuration via <code class="docutils literal notranslate"><span class="pre">DATABASE_URL</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">src/load_data.py</span></code>: Creates/truncates schema and bulk-loads JSON baseline data.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/load_data.py</span></code>: Creates baseline SQL DB with stored JSON data.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">src/query_data.py</span></code>: Runs analysis queries and stores answers in <code class="docutils literal notranslate"><span class="pre">answers_table</span></code>.</p></li>
 </ul>
 </section>

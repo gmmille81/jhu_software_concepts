@@ -206,14 +206,27 @@ def fake_refresh_pipeline(monkeypatch):
 
 @pytest.fixture()
 def postgres_connect_kwargs():
-    """Connection settings for integration tests from DATABASE_URL."""
+    """Connection settings for integration tests from DATABASE_URL or PG* vars."""
     database_url = os.getenv("DATABASE_URL")
-    if not database_url:
+    if database_url:
+        return {"conninfo": database_url}
+
+    pg_env = {
+        "dbname": os.getenv("PGDATABASE"),
+        "user": os.getenv("PGUSER"),
+        "password": os.getenv("PGPASSWORD"),
+        "host": os.getenv("PGHOST"),
+        "port": os.getenv("PGPORT"),
+    }
+    missing = [name for name, value in pg_env.items() if not value]
+    if missing:
+        missing_names = ", ".join(f"PG{n.upper()}" if n != "dbname" else "PGDATABASE" for n in missing)
         pytest.fail(
-            "Missing required PostgreSQL environment variable: DATABASE_URL"
+            "Missing required PostgreSQL environment variable(s): "
+            f"DATABASE_URL or all PG* values ({missing_names})"
         )
 
-    return {"conninfo": database_url}
+    return pg_env
 
 
 @pytest.fixture()

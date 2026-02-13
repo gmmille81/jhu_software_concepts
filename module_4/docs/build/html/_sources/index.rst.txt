@@ -7,5 +7,6 @@ Modern Software Concepts in Python Module 4 documentation
 
    overview_setup
    architecture
+   operational_notes
    api_reference
    testing_guide

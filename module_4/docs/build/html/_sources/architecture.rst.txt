@@ -9,17 +9,17 @@ Web Layer
   - ``POST /pull-data`` triggers background data refresh.
   - ``POST /update_analysis`` refreshes analysis answers.
 
-ETL Layer
----------
+Business Layer
+---------------
 - ``src/module_2/scrape.py``: Scrapes data from GradCafe.com.
-- ``src/module_2/clean.py``: Transforms raw data into normalized records.
-- ``src/refresh_data.py``: Coordinates scrape + clean + insert.
-- ``src/update_data.py``: Batch inserts normalized records into PostgreSQL.
+- ``src/module_2/clean.py``: Transforms raw scraped data into clean, normalized records.
+- ``src/refresh_data.py``: Coordinates scrape + clean to get consolidated new data in dict format.
+- ``src/update_data.py``: Batch inserts normalized records into PostgreSQL table.
 
 Database Layer
 --------------
 - ``src/db_config.py``: Centralized DB connection configuration via ``DATABASE_URL``.
-- ``src/load_data.py``: Creates/truncates schema and bulk-loads JSON baseline data.
+- ``src/load_data.py``: Creates baseline SQL DB with stored JSON data.
 - ``src/query_data.py``: Runs analysis queries and stores answers in ``answers_table``.
 
 Execution Flow

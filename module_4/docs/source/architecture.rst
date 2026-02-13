@@ -10,7 +10,7 @@ Web Layer
   - ``POST /update_analysis`` refreshes analysis answers.
 
 Business Layer
----------
+---------------
 - ``src/module_2/scrape.py``: Scrapes data from GradCafe.com.
 - ``src/module_2/clean.py``: Transforms raw scraped data into clean, normalized records.
 - ``src/refresh_data.py``: Coordinates scrape + clean to get consolidated new data in dict format.

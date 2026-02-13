@@ -1,6 +1,0 @@
-###Changes to existing module 3 code for module 4:
-Created empty __init__ to treat app as package
-Changed imports in app.py to start with "src."
-Changed query_data.py to not just run every time it was imported
-Had to create pages.py and modify app.py to work off of blueprints
-Updated app.py (now in pages.py) code to return a 409 error when the functions are already running, rather than returning to index
