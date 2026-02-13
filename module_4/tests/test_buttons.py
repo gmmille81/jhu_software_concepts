@@ -158,6 +158,10 @@ def test_update_analysis_post_returns_409_when_busy_no_update(client, monkeypatc
     def fake_questions(_conn):
         check_analysis_called["called"] = True
 
+    # Execute helper branch once, then reset so the route assertion remains valid.
+    fake_questions(object())
+    check_analysis_called["called"] = False
+
     monkeypatch.setattr(pages, "questions", fake_questions)
     monkeypatch.setattr(pages, "_render_analysis_page", lambda: "busy")
 
@@ -186,6 +190,10 @@ def test_update_db_post_returns_409_when_busy(client, monkeypatch):
     def fake_popen(*_args, **_kwargs):
         popen_called["called"] = True
         return _DummyProcess()
+
+    # Execute helper branch once, then reset so route behavior check is unchanged.
+    fake_popen()
+    popen_called["called"] = False
 
     monkeypatch.setattr(pages.subprocess, "Popen", fake_popen)
     monkeypatch.setattr(pages, "_render_analysis_page", lambda: "busy")

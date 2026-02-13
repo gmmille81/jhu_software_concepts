@@ -11,6 +11,7 @@ from psycopg import OperationalError, sql
 from datetime import datetime
 #creates db using python so manual db creation in terminal no longer required (only run once to init DB)
 from psycopg.sql import SQL, Identifier
+from db_config import get_db_connect_kwargs
 
 def insert_applicants_from_json_batch(entries):
     """
@@ -25,13 +26,7 @@ def insert_applicants_from_json_batch(entries):
     had_success = False
 
     try:
-        with psycopg.connect(
-            dbname="applicant_data",
-            user="postgres",
-            password="abc123",
-            host="127.0.0.1",
-            port=5432
-        ) as conn:
+        with psycopg.connect(**get_db_connect_kwargs()) as conn:
             with conn.cursor() as cur:
 
                 insert_query = """

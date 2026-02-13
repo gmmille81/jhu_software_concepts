@@ -1,5 +1,6 @@
 import psycopg
 from psycopg import OperationalError
+from db_config import get_db_connect_kwargs
 
 
 def connect():
@@ -11,13 +12,7 @@ def connect():
     """
     try:
         # Attempt to open a connection to the PostgreSQL database
-        connection = psycopg.connect(
-            dbname="applicant_data",
-            user="postgres",
-            password="abc123",
-            host="127.0.0.1",
-            port=5432
-        )
+        connection = psycopg.connect(**get_db_connect_kwargs())
     except OperationalError as e:
         # Print an error message if the database connection fails
         print(f"The error '{e}' occurred")

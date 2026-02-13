@@ -60,7 +60,9 @@ class _FakeConnection:
 
 
 @pytest.mark.analysis
-def test_update_analysis_rendered_output_includes_answer_labels(client, monkeypatch):
+def test_update_analysis_rendered_output_includes_answer_labels(
+    client, monkeypatch, assert_analysis_has_answer_labels
+):
     """Verify rendered analysis includes an `Answer:` label for each result.
 
     This test posts to `/update_analysis`, replaces DB/analysis dependencies
@@ -99,11 +101,13 @@ def test_update_analysis_rendered_output_includes_answer_labels(client, monkeypa
 
     # Template renders each row with `<strong>Answer: </strong>...`.
     # We expect at least one `Answer:` label per row we supplied.
-    assert html.count("Answer:") >= len(rows)
+    assert_analysis_has_answer_labels(html, expected_min_count=len(rows))
 
 
 @pytest.mark.analysis
-def test_update_analysis_formats_percentages_to_two_decimals(client, monkeypatch):
+def test_update_analysis_formats_percentages_to_two_decimals(
+    client, monkeypatch, assert_analysis_has_two_decimal_numeric_value
+):
     """Ensure percentage answers are rendered with exactly two decimals.
 
     The page route now applies final display formatting in `pages.py`, so this
@@ -141,3 +145,4 @@ def test_update_analysis_formats_percentages_to_two_decimals(client, monkeypatch
     # Confirm rendered content contains normalized value with two decimals.
     # Using regex keeps the assertion focused on formatting semantics.
     assert re.search(r"52\.30%", html)
+    assert_analysis_has_two_decimal_numeric_value(html)

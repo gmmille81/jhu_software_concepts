@@ -1,5 +1,7 @@
 import pytest
 import sys
+import psycopg
+import re
 from pathlib import Path
 
 SRC_DIR = Path(__file__).resolve().parents[1] / "src"
@@ -57,6 +59,7 @@ def test_post_update_db_succeeds_and_adds_rows(
     assert inserted_payload["rows"] is not None
     assert len(inserted_payload["rows"]) == 2
     assert_integration_rows_are_well_formed(inserted_payload["rows"])
+    assert pages.db_process.poll() is None
 
 
 @pytest.mark.integration
@@ -123,66 +126,307 @@ def test_post_update_analysis_succeeds_and_updates_analysis_from_stubbed_db(
 
 
 @pytest.mark.integration
-def test_get_analysis_reflects_updated_values_after_post_update_analysis(
-    client, monkeypatch, fake_refresh_pipeline
+def test_end_to_end_pull_update_render_with_real_db(
+    client,
+    monkeypatch,
+    postgres_connect_kwargs,
+    reset_real_applicants_table,
+    seeded_answers_table,
+    assert_analysis_has_answer_labels,
+    assert_analysis_has_two_decimal_numeric_value,
 ):
-    """GET /analysis should show updated answers after POST /update_analysis."""
+    """End-to-end: dataset X and Y should produce different rendered analysis answers."""
 
-    refresh_result = refresh_data.update_db()
-    updated_rows = fake_refresh_pipeline["inserted_payload"]["rows"]
-    assert refresh_result == 0
-    assert updated_rows is not None
+    scrape_calls = []
+    active_dataset = {"name": "X"}
 
-    # Start with stale values to show they are replaced by update_analysis.
-    answers_table_rows = [("Pipeline marker", "stale-value")]
+    def fake_scrape_data(num_records):
+        # Real-like scraper shape consumed by the cleaner.
+        scrape_calls.append(num_records)
+        if active_dataset["name"] == "X" and num_records == 1:
+            return {
+                0: [
+                    "Johns Hopkins University\n",
+                    "Computer Science\n\n\n\nMasters\n",
+                    "\tJanuary 24, 2026\n",
+                    "\tAccepted on Jan 24\n",
+                    "",
+                    "https://www.thegradcafe.com/result/1002",
+                    "American Fall2026 GPA:3.90 GRE329 GREV162 GREAW4.5",
+                    "Single latest row",
+                ]
+            }
+        if active_dataset["name"] == "X":
+            return {
+                0: [
+                    "Johns Hopkins University\n",
+                    "Computer Science\n\n\n\nMasters\n",
+                    "\tJanuary 24, 2026\n",
+                    "\tAccepted on Jan 24\n",
+                    "",
+                    "https://www.thegradcafe.com/result/1002",
+                    "American Fall2026 GPA:3.90 GRE329 GREV162 GREAW4.5",
+                    "Row one comment",
+                ],
+                1: [
+                    "MIT\n",
+                    "Computer Science\n\n\n\nPhD\n",
+                    "\tJanuary 23, 2026\n",
+                    "\tRejected on Jan 23\n",
+                    "",
+                    "https://www.thegradcafe.com/result/1001",
+                    "International Fall2026 GPA:3.70 GRE325 GREV160 GREAW4.0",
+                    "Row two comment",
+                ],
+            }
 
-    class _FakeCursor:
-        def execute(self, _query):
-            return None
+        # Dataset Y (three Fall 2026 rows) to force changed query output.
+        if num_records == 1:
+            return {
+                0: [
+                    "Stanford University\n",
+                    "Computer Science\n\n\n\nPhD\n",
+                    "\tJanuary 27, 2026\n",
+                    "\tAccepted on Jan 27\n",
+                    "",
+                    "https://www.thegradcafe.com/result/2003",
+                    "International Fall2026 GPA:3.98 GRE334 GREV166 GREAW5.0",
+                    "Latest Y row",
+                ]
+            }
+        return {
+            0: [
+                "Stanford University\n",
+                "Computer Science\n\n\n\nPhD\n",
+                "\tJanuary 27, 2026\n",
+                "\tAccepted on Jan 27\n",
+                "",
+                "https://www.thegradcafe.com/result/2003",
+                "International Fall2026 GPA:3.98 GRE334 GREV166 GREAW5.0",
+                "Y row one comment",
+            ],
+            1: [
+                "Carnegie Mellon University\n",
+                "Computer Science\n\n\n\nPhD\n",
+                "\tJanuary 26, 2026\n",
+                "\tAccepted on Jan 26\n",
+                "",
+                "https://www.thegradcafe.com/result/2002",
+                "American Fall2026 GPA:3.85 GRE330 GREV163 GREAW4.5",
+                "Y row two comment",
+            ],
+            2: [
+                "MIT\n",
+                "Computer Science\n\n\n\nMasters\n",
+                "\tJanuary 25, 2026\n",
+                "\tAccepted on Jan 25\n",
+                "",
+                "https://www.thegradcafe.com/result/2001",
+                "International Fall2026 GPA:3.75 GRE326 GREV161 GREAW4.0",
+                "Y row three comment",
+            ],
+        }
 
-        def fetchall(self):
-            return answers_table_rows
+    def fake_clean_data(scraped):
+        cleaned = []
+        for raw in scraped.values():
+            university = raw[0].strip()
+            program_major = raw[1].split("\n\n\n\n")[0].replace("\n", "").strip()
+            degree = raw[1].split("\n\n\n\n")[1].split("\n")[0].strip()
+            status = raw[3].replace("\t", "").split("on")[0].strip()
+            extra = raw[6]
+            us_or_int = "American" if "American" in extra else "International"
 
-        def close(self):
-            return None
+            cleaned.append(
+                {
+                    "program": f"{program_major}, {university}",
+                    "comments": raw[7],
+                    "date_added": raw[2].replace("\t", "").replace("\n", "").strip(),
+                    "url": raw[5],
+                    "status": status,
+                    "term": "Fall 2026",
+                    "US/International": us_or_int,
+                    "GPA": "3.90" if "result/1002" in raw[5] else "3.70",
+                    "GRE Score": "329" if "result/1002" in raw[5] else "325",
+                    "GRE V Score": "162" if "result/1002" in raw[5] else "160",
+                    "GRE AW": "4.5" if "result/1002" in raw[5] else "4.0",
+                    "Degree": degree,
+                    "llm-generated-program": "Computer Science",
+                    "llm-generated-university": university,
+                }
+            )
+        return cleaned
 
-    class _FakeConnection:
-        def cursor(self):
-            return _FakeCursor()
+    def fake_get_newest_p():
+        # Make refresh logic request exactly the rows for each dataset.
+        return 1000 if active_dataset["name"] == "X" else 2000
 
-        def close(self):
-            return None
+    class _DoneProcess:
+        # Mark subprocess as completed immediately so db_is_running() is false.
+        def poll(self):
+            return 0
 
-    def fake_connect():
-        return _FakeConnection()
+    def fake_popen(*_args, **_kwargs):
+        refresh_data.update_db()
+        return _DoneProcess()
 
-    def fake_questions(_conn):
-        total_rows = len(updated_rows)
-        accepted_rows = sum(1 for row in updated_rows if row["status"] == "Accepted")
-        answers_table_rows[:] = [
-            ("Pipeline marker", "fresh-value"),
-            ("How many rows were updated?", str(total_rows)),
-            ("How many rows are accepted?", str(accepted_rows)),
-        ]
+    monkeypatch.setattr(refresh_data, "scrape_data", fake_scrape_data)
+    monkeypatch.setattr(refresh_data, "clean_data", fake_clean_data)
+    monkeypatch.setattr(refresh_data, "get_newest_p", fake_get_newest_p)
+    monkeypatch.setattr(pages.subprocess, "Popen", fake_popen)
 
     pages.db_process = None
     pages.status_message = None
     pages.user_message = None
-    monkeypatch.setattr(pages, "connect", fake_connect)
-    monkeypatch.setattr(pages, "questions", fake_questions)
 
-    before_get = client.get("/analysis")
-    before_html = before_get.data.decode("utf-8")
-    assert before_get.status_code == 200
-    assert "stale-value" in before_html
+    target_question = "How many entries do you have in your database who have applied for Fall 2026?"
 
-    post_update = client.post("/update_analysis")
-    assert post_update.status_code == 200
+    def extract_answer(html, question):
+        pattern = re.compile(
+            rf"<h3>\s*{re.escape(question)}\s*</h3>\s*<p class=\"answer\"><strong>Answer:\s*</strong>(.*?)</p>",
+            re.DOTALL,
+        )
+        match = pattern.search(html)
+        assert match is not None
+        return match.group(1).strip()
 
-    after_get = client.get("/analysis")
-    after_html = after_get.data.decode("utf-8")
-    assert after_get.status_code == 200
-    assert "fresh-value" in after_html
-    assert "How many rows were updated?" in after_html
-    assert "How many rows are accepted?" in after_html
-    assert "stale-value" not in after_html
+    def run_full_cycle_for(dataset_name, expected_records):
+        active_dataset["name"] = dataset_name
+        scrape_calls.clear()
+        pages.db_process = None
+        pages.status_message = None
+        pages.user_message = None
+
+        with psycopg.connect(**postgres_connect_kwargs) as conn:
+            with conn.cursor() as cur:
+                cur.execute("TRUNCATE TABLE applicants;")
+            conn.commit()
+
+        pull_response = client.post("/update-db")
+        assert pull_response.status_code == 200
+        assert scrape_calls == [1, expected_records]
+
+        with psycopg.connect(**postgres_connect_kwargs) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM applicants;")
+                applicants_count = cur.fetchone()[0]
+        assert applicants_count == expected_records
+
+        update_response = client.post("/update_analysis")
+        assert update_response.status_code == 200
+
+        render_response = client.get("/analysis")
+        assert render_response.status_code == 200
+        html = render_response.data.decode("utf-8")
+        assert "Answer:" in html
+        return html
+
+    # Run dataset X then dataset Y and prove displayed analysis answer changes.
+    html_x = run_full_cycle_for("X", 2)
+    answer_x = extract_answer(html_x, target_question)
+
+    html_y = run_full_cycle_for("Y", 3)
+    answer_y = extract_answer(html_y, target_question)
+
+    assert answer_x == "2"
+    assert answer_y == "3"
+    assert answer_x != answer_y
+    assert_analysis_has_answer_labels(html_y, expected_min_count=2)
+    assert_analysis_has_two_decimal_numeric_value(html_y)
+
+
+@pytest.mark.integration
+def test_post_update_db_twice_with_overlapping_data_preserves_uniqueness(
+    client,
+    monkeypatch,
+    postgres_connect_kwargs,
+    reset_real_applicants_table,
+    seeded_answers_table,
+):
+    """Two pull runs with overlap should not create duplicate applicant rows."""
+
+    call_index = {"n": 0}
+
+    def make_cleaned_row(p_id, status):
+        return {
+            "program": "Computer Science, Johns Hopkins University",
+            "comments": f"row-{p_id}",
+            "date_added": "January 25, 2026",
+            "url": f"https://www.thegradcafe.com/result/{p_id}",
+            "status": status,
+            "term": "Fall 2026",
+            "US/International": "American",
+            "GPA": "3.90",
+            "GRE Score": "329",
+            "GRE V Score": "162",
+            "GRE AW": "4.5",
+            "Degree": "Masters",
+            "llm-generated-program": "Computer Science",
+            "llm-generated-university": "Johns Hopkins University",
+        }
+
+    def fake_scrape_data(_num_records):
+        # Call order across two POSTs:
+        # 1) probe X newest=3002
+        # 2) pull X -> 3002,3001
+        # 3) probe Y newest=3003
+        # 4) pull Y -> 3003,3002,3001 (overlap with X)
+        call_index["n"] += 1
+        n = call_index["n"]
+        if n == 1:
+            return {0: make_cleaned_row(3002, "Accepted")}
+        if n == 2:
+            return {
+                0: make_cleaned_row(3002, "Accepted"),
+                1: make_cleaned_row(3001, "Rejected"),
+            }
+        if n == 3:
+            return {0: make_cleaned_row(3003, "Accepted")}
+        return {
+            0: make_cleaned_row(3003, "Accepted"),
+            1: make_cleaned_row(3002, "Accepted"),
+            2: make_cleaned_row(3001, "Rejected"),
+        }
+
+    def fake_clean_data(scraped):
+        # Fake scraper already returns cleaned-entry-like dicts.
+        return list(scraped.values())
+
+    def fake_get_newest_p():
+        # Keep fixed baseline so second run requests an overlapping pull set.
+        return 3000
+
+    class _DoneProcess:
+        def poll(self):
+            return 0
+
+    def fake_popen(*_args, **_kwargs):
+        refresh_data.update_db()
+        return _DoneProcess()
+
+    monkeypatch.setattr(refresh_data, "scrape_data", fake_scrape_data)
+    monkeypatch.setattr(refresh_data, "clean_data", fake_clean_data)
+    monkeypatch.setattr(refresh_data, "get_newest_p", fake_get_newest_p)
+    monkeypatch.setattr(pages.subprocess, "Popen", fake_popen)
+
+    pages.db_process = None
+    pages.status_message = None
+    pages.user_message = None
+
+    first_pull = client.post("/update-db")
+    assert first_pull.status_code == 200
+
+    second_pull = client.post("/update-db")
+    assert second_pull.status_code == 200
+
+    with psycopg.connect(**postgres_connect_kwargs) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*), COUNT(DISTINCT p_id) FROM applicants;")
+            total_count, distinct_count = cur.fetchone()
+            cur.execute("SELECT p_id FROM applicants ORDER BY p_id;")
+            p_ids = [row[0] for row in cur.fetchall()]
+
+    # Uniqueness policy: overlapping pulls do not duplicate existing rows.
+    assert total_count == 3
+    assert distinct_count == 3
+    assert p_ids == [3001, 3002, 3003]

@@ -13,6 +13,7 @@ import json
 from datetime import datetime
 #creates db using python so manual db creation in terminal no longer required (only run once to init DB)
 from psycopg.sql import SQL, Identifier
+from db_config import get_db_connect_kwargs
 
 def create_database(db_name, db_user, db_password, db_host, db_port):
     """
@@ -46,13 +47,7 @@ def create_table():
     Uses p_id from the last part of the URL as a BIGINT primary key.
     """
     try:
-        with psycopg.connect(
-            dbname="applicant_data",
-            user="postgres",
-            password="abc123",
-            host="127.0.0.1",
-            port=5432
-        ) as conn:
+        with psycopg.connect(**get_db_connect_kwargs()) as conn:
             with conn.cursor() as cur:
                 # Step 1: Drop table if it exists
                 cur.execute("DROP TABLE IF EXISTS applicants;")
@@ -93,13 +88,7 @@ def bulk_insert_json(json_file_path, batch_size=1000):
     Prints the number of duplicates skipped.
     """
     try:
-        with psycopg.connect(
-            dbname="applicant_data",
-            user="postgres",
-            password="abc123",
-            host="127.0.0.1",
-            port=5432
-        ) as conn:
+        with psycopg.connect(**get_db_connect_kwargs()) as conn:
             with conn.cursor() as cur:
 
                 # Step 1: Clear existing data
@@ -224,4 +213,3 @@ filename = os.path.join(dirname, 'module_2/llm_extend_applicant_data.json')
 # Initial functions to create the table 
 create_table()
 bulk_insert_json(filename)
-

@@ -3,13 +3,18 @@ import re
 import sys
 import os
 from pathlib import Path
-from src.app import create_app
 import psycopg
 from psycopg import OperationalError
 
-SRC_DIR = Path(__file__).resolve().parents[1] / "src"
+MODULE4_DIR = Path(__file__).resolve().parents[1]
+if str(MODULE4_DIR) not in sys.path:
+    sys.path.insert(0, str(MODULE4_DIR))
+
+SRC_DIR = MODULE4_DIR / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
+
+from src.app import create_app
 
 import refresh_data
 
@@ -77,6 +82,26 @@ def assert_integration_rows_are_well_formed(integration_expected_keys):
             assert re.fullmatch(r"\d\.\d", row["GRE AW"])
 
     return _assert_rows
+
+
+@pytest.fixture()
+def assert_analysis_has_answer_labels():
+    """Return helper asserting rendered analysis includes Answer labels."""
+
+    def _assert(html, expected_min_count):
+        assert html.count("Answer:") >= expected_min_count
+
+    return _assert
+
+
+@pytest.fixture()
+def assert_analysis_has_two_decimal_numeric_value():
+    """Return helper asserting rendered analysis includes a 2-decimal value."""
+
+    def _assert(html):
+        assert re.search(r"\b\d+\.\d{2}%?\b", html)
+
+    return _assert
 
 
 @pytest.fixture()
@@ -175,26 +200,34 @@ def fake_refresh_pipeline(monkeypatch):
 
 @pytest.fixture()
 def postgres_connect_kwargs():
-    """Connection settings for integration tests against a real PostgreSQL DB."""
+    """Connection settings for integration tests from environment variables only."""
+    required = ("PGDATABASE", "PGUSER", "PGPASSWORD", "PGHOST", "PGPORT")
+    missing = [name for name in required if not os.getenv(name)]
+    if missing:
+        missing_joined = ", ".join(missing)
+        pytest.fail(
+            f"Missing required PostgreSQL environment variable(s): {missing_joined}"
+        )
+
     return {
-        "dbname": os.getenv("PGDATABASE", "applicant_data"),
-        "user": os.getenv("PGUSER", "postgres"),
-        "password": os.getenv("PGPASSWORD", "abc123"),
-        "host": os.getenv("PGHOST", "127.0.0.1"),
-        "port": int(os.getenv("PGPORT", "5432")),
+        "dbname": os.environ["PGDATABASE"],
+        "user": os.environ["PGUSER"],
+        "password": os.environ["PGPASSWORD"],
+        "host": os.environ["PGHOST"],
+        "port": int(os.environ["PGPORT"]),
     }
 
 
 @pytest.fixture()
 def real_postgres_ready(postgres_connect_kwargs):
-    """Skip the test if a real PostgreSQL instance is not reachable."""
+    """Fail fast if a real PostgreSQL instance is not reachable."""
     try:
         with psycopg.connect(connect_timeout=2, **postgres_connect_kwargs) as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1;")
                 cur.fetchone()
     except OperationalError as exc:
-        pytest.skip(f"Real PostgreSQL not available for integration tests: {exc}")
+        pytest.fail(f"Real PostgreSQL is required for this test run: {exc}")
 
 
 @pytest.fixture()

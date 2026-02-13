@@ -18,23 +18,23 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: applicant_data
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: abc123
+          POSTGRES_DB: ${{ vars.PGDATABASE }}
+          POSTGRES_USER: ${{ vars.PGUSER }}
+          POSTGRES_PASSWORD: ${{ secrets.PGPASSWORD }}
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d applicant_data"
+          --health-cmd "pg_isready -U ${{ vars.PGUSER }} -d ${{ vars.PGDATABASE }}"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
 
     env:
-      PGHOST: 127.0.0.1
-      PGPORT: 5432
-      PGDATABASE: applicant_data
-      PGUSER: postgres
-      PGPASSWORD: abc123
+      PGHOST: ${{ vars.PGHOST }}
+      PGPORT: ${{ vars.PGPORT }}
+      PGDATABASE: ${{ vars.PGDATABASE }}
+      PGUSER: ${{ vars.PGUSER }}
+      PGPASSWORD: ${{ secrets.PGPASSWORD }}
 
     steps:
       - name: Checkout
@@ -50,6 +50,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r src/requirements.txt pytest
+
+      - name: Validate DB env
+        run: |
+          test -n "$PGHOST"
+          test -n "$PGPORT"
+          test -n "$PGDATABASE"
+          test -n "$PGUSER"
+          test -n "$PGPASSWORD"
 
       - name: Run pytest suite
         working-directory: module_4

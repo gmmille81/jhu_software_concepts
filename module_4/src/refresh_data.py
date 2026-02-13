@@ -7,6 +7,7 @@ from module_2.scrape import scrape_data       # Function to scrape data from the
 from module_2.clean import clean_data         # Function to clean/format the scraped data
 from update_data import insert_applicants_from_json_batch  # Function to insert data into SQL DB
 import psycopg                                # PostgreSQL database connector
+from db_config import get_db_connect_kwargs
 
 def get_newest_p():
     """
@@ -15,13 +16,7 @@ def get_newest_p():
         int or None: The maximum p_id in the table, or None if table is empty
     """
     # Connect to the PostgreSQL database
-    with psycopg.connect(
-        dbname="applicant_data",
-        user="postgres",
-        password="abc123",
-        host="127.0.0.1",
-        port=5432
-    ) as conn:
+    with psycopg.connect(**get_db_connect_kwargs()) as conn:
         # Open a cursor to execute SQL commands
         with conn.cursor() as cur:
             # Get the maximum p_id from the applicants table

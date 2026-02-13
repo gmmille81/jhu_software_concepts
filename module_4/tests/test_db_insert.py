@@ -183,3 +183,6 @@ def test_can_query_inserted_data_and_return_dict_with_required_keys_real_postgre
 
     for field in ALL_SQL_FIELDS:
         assert field in row_dict
+
+    # Also validate the helper's None-return path when no row exists.
+    assert query_applicant_as_dict(99999999) is None
