@@ -35,7 +35,10 @@ jobs:
         working-directory: module_4
         run: |
           python -m pip install --upgrade pip
-          pip install -r src/requirements.txt pytest
+          python -m pip install -r requirements.txt
+          python -m pip install -r src/requirements.txt
+          python -m pip show pytest pytest-cov
+          python -m pytest --version
 
       - name: Validate DB env
         run: |
@@ -58,4 +61,4 @@ jobs:
 
       - name: Run pytest suite
         working-directory: module_4
-        run: pytest -q tests
+        run: python -m pytest -q tests
