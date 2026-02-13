@@ -1,5 +1,6 @@
 import pytest
 import sys
+import psycopg
 from pathlib import Path
 from datetime import date
 
@@ -499,3 +500,118 @@ def test_can_query_inserted_data_and_return_dict_with_required_keys(monkeypatch)
     # Ensure the result includes all required DB keys for downstream use.
     for key in sql_fields:
         assert key in row_dict
+
+
+@pytest.mark.integration
+def test_insert_applicants_from_json_batch_real_postgres_inserts_rows(
+    monkeypatch, postgres_connect_kwargs, reset_real_applicants_table
+):
+    """Use a real PostgreSQL table to validate insert + type conversions."""
+
+    original_connect = update_data.psycopg.connect
+
+    def fake_connect(**_kwargs):
+        # Route update_data DB calls to env-driven integration DB settings.
+        return original_connect(**postgres_connect_kwargs)
+
+    monkeypatch.setattr(update_data.psycopg, "connect", fake_connect)
+
+    entry = {
+        "program": "Computer Science, Johns Hopkins University",
+        "comments": "Real DB row",
+        "date_added": "January 25, 2026",
+        "url": "https://www.thegradcafe.com/result/7001",
+        "status": "Accepted",
+        "term": "Fall 2026",
+        "US/International": "American",
+        "GPA": "3.95",
+        "GRE Score": "332",
+        "GRE V Score": "165",
+        "GRE AW": "4.5",
+        "Degree": "Masters",
+        "llm-generated-program": "Computer Science",
+        "llm-generated-university": "Johns Hopkins University",
+    }
+
+    result = update_data.insert_applicants_from_json_batch([entry])
+    assert result == 0
+
+    with psycopg.connect(**postgres_connect_kwargs) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT p_id, program, date_added, gpa, gre, gre_v, gre_aw
+                FROM applicants
+                WHERE p_id = 7001
+                """
+            )
+            row = cur.fetchone()
+
+    assert row is not None
+    assert row[0] == 7001
+    assert row[1] == "Computer Science, Johns Hopkins University"
+    assert row[2] == date(2026, 1, 25)
+    assert row[3] == 3.95
+    assert row[4] == 332.0
+    assert row[5] == 165.0
+    assert row[6] == 4.5
+
+
+@pytest.mark.integration
+def test_insert_applicants_from_json_batch_real_postgres_ignores_duplicates(
+    monkeypatch, postgres_connect_kwargs, reset_real_applicants_table
+):
+    """Real PostgreSQL ON CONFLICT should prevent duplicate row creation."""
+
+    original_connect = update_data.psycopg.connect
+
+    def fake_connect(**_kwargs):
+        return original_connect(**postgres_connect_kwargs)
+
+    monkeypatch.setattr(update_data.psycopg, "connect", fake_connect)
+
+    duplicate_entries = [
+        {
+            "program": "Computer Science, MIT",
+            "comments": "First copy",
+            "date_added": "January 26, 2026",
+            "url": "https://www.thegradcafe.com/result/7002",
+            "status": "Accepted",
+            "term": "Fall 2026",
+            "US/International": "International",
+            "GPA": "3.80",
+            "GRE Score": "328",
+            "GRE V Score": "161",
+            "GRE AW": "4.0",
+            "Degree": "PhD",
+            "llm-generated-program": "Computer Science",
+            "llm-generated-university": "MIT",
+        },
+        {
+            # Duplicate p_id via same URL.
+            "program": "Computer Science, MIT",
+            "comments": "Second copy",
+            "date_added": "January 26, 2026",
+            "url": "https://www.thegradcafe.com/result/7002",
+            "status": "Accepted",
+            "term": "Fall 2026",
+            "US/International": "International",
+            "GPA": "3.80",
+            "GRE Score": "328",
+            "GRE V Score": "161",
+            "GRE AW": "4.0",
+            "Degree": "PhD",
+            "llm-generated-program": "Computer Science",
+            "llm-generated-university": "MIT",
+        },
+    ]
+
+    result = update_data.insert_applicants_from_json_batch(duplicate_entries)
+    assert result == 1
+
+    with psycopg.connect(**postgres_connect_kwargs) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM applicants WHERE p_id = 7002;")
+            count = cur.fetchone()[0]
+
+    assert count == 1
