@@ -1156,9 +1156,10 @@ def test_postgres_connect_kwargs_fixture_fails_when_env_missing(monkeypatch):
 @pytest.mark.integration
 def test_postgres_connect_kwargs_fixture_uses_pg_fallback_when_database_url_missing(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
+    generated_password = secrets.token_hex(12)
     monkeypatch.setenv("PGDATABASE", "applicant_data")
     monkeypatch.setenv("PGUSER", "postgres")
-    monkeypatch.setenv("PGPASSWORD", "abc123")
+    monkeypatch.setenv("PGPASSWORD", generated_password)
     monkeypatch.setenv("PGHOST", "127.0.0.1")
     monkeypatch.setenv("PGPORT", "5432")
 
@@ -1166,7 +1167,7 @@ def test_postgres_connect_kwargs_fixture_uses_pg_fallback_when_database_url_miss
     assert kwargs == {
         "dbname": "applicant_data",
         "user": "postgres",
-        "password": "abc123",
+        "password": generated_password,
         "host": "127.0.0.1",
         "port": "5432",
     }
