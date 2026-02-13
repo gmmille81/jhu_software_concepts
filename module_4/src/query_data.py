@@ -1,3 +1,5 @@
+"""Database connectivity and analysis-query execution helpers."""
+
 import psycopg
 from psycopg import OperationalError
 from db_config import get_db_connect_kwargs

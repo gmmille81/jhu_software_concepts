@@ -23,6 +23,13 @@ Example:
 Run the App
 -----------
 
+Before starting the Flask app, initialize a baseline SQL database:
+
+.. code-block:: bash
+
+   cd module_4
+   python3 src/load_data.py
+
 .. code-block:: bash
 
    cd module_4

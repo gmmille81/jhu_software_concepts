@@ -1,6 +1,4 @@
-### Author: Greg Miller
-### Class: Modern Software Concepts in Python
-### File purpose: Update the applicants SQL table with newly-parsed and cleaned data
+"""Database insertion helpers for cleaned applicant records."""
 import sys
 import os
 
@@ -15,13 +13,15 @@ from db_config import get_db_connect_kwargs
 
 def insert_applicants_from_json_batch(entries):
     """
-    Inserts a batch of applicant records.
+    Insert a batch of cleaned applicant records into ``applicants``.
 
     Returns:
         1 - at least one row hit ON CONFLICT
         0 - all rows inserted successfully
        -1 - all rows invalid or a DB error occurred
     """
+    # Track whether any record was inserted vs. skipped by ON CONFLICT so the
+    # function can report mixed outcomes deterministically.
     had_conflict = False
     had_success = False
 
@@ -64,7 +64,7 @@ def insert_applicants_from_json_batch(entries):
                         except ValueError:
                             pass
 
-                    # Numeric conversions
+                    # Numeric conversions for DB float columns.
                     gpa = float(entry.get("GPA")) if entry.get("GPA") else None
                     gre = float(entry.get("GRE Score")) if entry.get("GRE Score") else None
                     gre_v = float(entry.get("GRE V Score")) if entry.get("GRE V Score") else None

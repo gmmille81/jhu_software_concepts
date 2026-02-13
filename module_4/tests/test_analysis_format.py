@@ -1,3 +1,5 @@
+"""Analysis rendering-format tests for labels and percentage precision."""
+
 import pytest
 import sys
 import re

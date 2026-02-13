@@ -8,6 +8,8 @@ def get_db_connect_kwargs():
     Required variable:
     - DATABASE_URL
     """
+    # Centralize DB connection wiring so all modules use the same
+    # environment-driven configuration surface.
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         raise RuntimeError(

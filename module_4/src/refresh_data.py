@@ -1,8 +1,5 @@
-### Author: Greg Miller
-### Class: Modern Software Concepts in Python
-### File purpose: Get updated data from GradCafe
+"""Refresh-pipeline coordinator for scrape -> clean -> insert."""
 
-import subprocess
 from module_2.scrape import scrape_data       # Function to scrape data from the website
 from module_2.clean import clean_data         # Function to clean/format the scraped data
 from update_data import insert_applicants_from_json_batch  # Function to insert data into SQL DB
@@ -38,7 +35,8 @@ def update_db():
     Returns:
         int: 0 if new data was added, 1 if database was already up-to-date
     """
-    # Scrape the first page to see newest entries
+    # First fetch one row to inspect the newest site p_id without pulling
+    # the full missing range yet.
     new_data = scrape_data(1)
     # Clean the scraped data
     new_data_cleaned = clean_data(new_data)
@@ -47,6 +45,7 @@ def update_db():
     newest_site_p = int(new_data_cleaned[0]['url'].split('/')[-1])
 
     # Calculate number of new entries missing in the database
+    # Positive value means the local DB is behind the latest site row.
     num_data_needed = newest_site_p - get_newest_p()
     print(num_data_needed)
     if num_data_needed != 0:

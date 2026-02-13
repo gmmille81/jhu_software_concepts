@@ -95,8 +95,8 @@
 <section id="etl-layer">
 <h2>ETL Layer<a class="headerlink" href="#etl-layer" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">src/module_2/scrape.py</span></code>: Scrapes raw GradCafe rows.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">src/module_2/clean.py</span></code>: Transforms raw rows into normalized records.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/module_2/scrape.py</span></code>: Scrapes data from GradCafe.com.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">src/module_2/clean.py</span></code>: Transforms raw data into normalized records.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">src/refresh_data.py</span></code>: Coordinates scrape + clean + insert.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">src/update_data.py</span></code>: Batch inserts normalized records into PostgreSQL.</p></li>
 </ul>
@@ -113,10 +113,10 @@
 <h2>Execution Flow<a class="headerlink" href="#execution-flow" title="Link to this heading"></a></h2>
 <ol class="arabic simple">
 <li><p>User clicks <strong>Pull Data</strong> in UI.</p></li>
-<li><p>Web layer starts <code class="docutils literal notranslate"><span class="pre">update_db.py</span></code> subprocess.</p></li>
-<li><p>Refresh pipeline fetches new rows and inserts unique applicants.</p></li>
-<li><p>User clicks <strong>Update Analysis</strong>.</p></li>
-<li><p>Query layer recomputes answers and UI renders formatted values.</p></li>
+<li><p>Web layer starts <code class="docutils literal notranslate"><span class="pre">update_db.py</span></code> subprocess, which pulls new data from GradCafe.</p></li>
+<li><p>New data is inserted into PostgreSQL.</p></li>
+<li><p>User clicks <strong>Update Analysis</strong>, and <code class="docutils literal notranslate"><span class="pre">query_data.questions()</span></code> runs analysis queries and stores results.</p></li>
+<li><p>Flask webpage displays updated analysis values.</p></li>
 </ol>
 </section>
 </section>

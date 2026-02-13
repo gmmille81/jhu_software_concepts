@@ -1,3 +1,5 @@
+"""Real-PostgreSQL insertion tests for applicant write-path behavior."""
+
 import pytest
 import sys
 import psycopg
@@ -80,7 +82,7 @@ def test_insert_applicants_from_json_batch_inserts_required_fields_real_postgres
     reset_real_applicants_table,
     sample_entry,
 ):
-    """Insert rows into real PostgreSQL and verify required non-null fields."""
+    """Insert one row and verify schema presence + required non-null columns."""
     result = update_data.insert_applicants_from_json_batch([sample_entry])
     assert result == 0
 
@@ -165,7 +167,7 @@ def test_can_query_inserted_data_and_return_dict_with_required_keys_real_postgre
     reset_real_applicants_table,
     sample_entry,
 ):
-    """Verify querying real DB row and projecting to dict with full schema keys."""
+    """Verify read-back projection uses the expected full schema key set."""
     result = update_data.insert_applicants_from_json_batch([sample_entry])
     assert result == 0
 

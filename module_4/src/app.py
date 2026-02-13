@@ -1,9 +1,15 @@
-# src/app.py
+"""Flask application factory and executable entrypoint."""
+
 from flask import Flask
 
 def create_app():
     """
-    Factory function to create Flask app
+    Build and configure the Flask application instance.
+
+    Returns
+    -------
+    flask.Flask
+        App with the main blueprint registered.
     """
     app = Flask(__name__)
 
@@ -15,6 +21,7 @@ def create_app():
 
 
 def main():
+    """Run the Flask development server for local execution."""
     app = create_app()
     app.run(host="127.0.0.1", port=8080, debug=True, use_reloader=False)
 

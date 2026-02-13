@@ -1,3 +1,5 @@
+"""Smoke tests for Flask app creation and analysis page rendering."""
+
 import pytest
 from flask import Flask,url_for
 from src.app import create_app
@@ -12,6 +14,7 @@ def test_create_app(app):
 @pytest.mark.web
 
 def test_page_load(client, seeded_answers_table):
+    # ``seeded_answers_table`` ensures GET /analysis has at least one answer row.
     response = client.get("/analysis")
     assert response.status_code == 200
     html = response.data.decode("utf-8")

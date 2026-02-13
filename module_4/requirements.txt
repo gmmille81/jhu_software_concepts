@@ -1,0 +1,9 @@
+flask
+psycopg
+urllib3
+beautifulsoup4
+certifi
+pytest
+pytest-cov
+sphinx
+sphinx-rtd-theme

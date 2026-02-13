@@ -1,3 +1,5 @@
+"""Shared pytest fixtures for app, DB, and integration helpers."""
+
 import pytest
 import re
 import sys
@@ -106,7 +108,11 @@ def assert_analysis_has_two_decimal_numeric_value():
 
 @pytest.fixture()
 def fake_refresh_pipeline(monkeypatch):
-    """Install a realistic fake scrape->clean->insert pipeline for refresh_data."""
+    """Install a realistic fake scrape->clean->insert pipeline for refresh_data.
+
+    This fixture keeps integration tests deterministic by fully controlling
+    external ETL dependencies while preserving the real data-shape contracts.
+    """
     scrape_calls = []
     inserted_payload = {"rows": None}
 

@@ -26,6 +26,6 @@ Execution Flow
 --------------
 1. User clicks **Pull Data** in UI.
 2. Web layer starts ``update_db.py`` subprocess, which pulls new data from GradCafe.
-3. New data is inserted into PostGreSQL DB.
-4. User clicks **Update Analysis** and query_data() function completes queries to analyze applicant data and stores analysis in DB table.
+3. New data is inserted into PostgreSQL.
+4. User clicks **Update Analysis**, and ``query_data.questions()`` runs analysis queries and stores results.
 5. Flask webpage displays updated analysis values.

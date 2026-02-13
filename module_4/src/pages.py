@@ -1,4 +1,5 @@
-# src/pages.py
+"""Flask route handlers and rendering helpers for analysis UI."""
+
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 import subprocess
 import sys
